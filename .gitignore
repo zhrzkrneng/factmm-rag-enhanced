@@ -1,0 +1,59 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Environment and secret files
+.env
+.env.*
+*.pem
+*.key
+secrets/
+credentials/
+
+# Datasets
+data/
+datasets/
+*.csv
+*.tsv
+*.json.gz
+*.h5
+*.dcm
+*.nii
+*.nii.gz
+
+# Generated outputs
+results/*
+!results/.gitkeep
+outputs/
+*.out
+
+# Logs
+*.log
+logs/
+
+# Model checkpoints and weights
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.safetensors
+checkpoints/
+weights/
