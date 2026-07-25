@@ -44,8 +44,27 @@ the Milestone 2.1 architecture explanation).
 - [x] Cell 09 — `JsonReportParser` implementation + unit tests — **SUCCESS** (12/12 tests passed)
 - [x] Cell 10 — `IntegrityChecker` + exception types implementation + unit tests — **SUCCESS** (21/21 tests passed)
 - [x] Cell 11 — `PatientSplitValidator` implementation + unit tests — **SUCCESS** (28/28 tests passed)
-- [ ] Cell 12 — `ManifestBuilder` + schema implementation + unit tests — in progress (last planned class for Milestone 2.1)
+- [x] Cell 12 — `ManifestBuilder` + schema implementation + unit tests — **SUCCESS** (33/33 tests passed; demo manifest verified leak-free on Drive)
+- [ ] Cell 13 — end-to-end pipeline smoke test — in progress
+
+## Implementation Deviations From the Original Phase 1 Sketch
+
+Documented here per CLAUDE.md's "document assumptions and deviations"
+rule — both are simplifications discovered once the classes were
+actually implemented, not silent changes:
+
+1. **One parser class, not two.** Phase 1 planned separate
+   `MimicCxrParser`/`CheXpertParser` classes. Both datasets turned out
+   to share the identical JSON schema (`{"image", "finding",
+   "impression"}`), differing only in their patient/study directory
+   naming convention embedded in image paths. `JsonReportParser`,
+   parameterized by `dataset`, replaces both without duplicating logic.
+2. **One manifest class, not two.** Phase 1 planned
+   `DatasetManifest`+`SplitManifest`. Nothing needs a combined
+   multi-split wrapper — a plain `Dict[str, List[ReportRecord]]` (what
+   `PatientSplitValidator` already accepts) covers that need — so only
+   `SplitManifest` (matching the actual per-split output file) exists.
 
 ## Next Step
 
-Run Cell 12 in Colab and report the output.
+Run Cell 13 in Colab and report the output.

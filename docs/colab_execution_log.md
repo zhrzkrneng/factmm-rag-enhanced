@@ -248,3 +248,30 @@ run.
 - **Next step**: implement `ManifestBuilder` (`src/data/manifest.py`)
   and its schema (`src/common/manifest.py`) — the last class planned
   for Milestone 2.1
+
+---
+
+## Cell 12 — `ManifestBuilder` Import, Test, and Demo Manifest
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–11
+- **Key outputs**:
+  - `git pull` fast-forwarded cleanly (`eba3b62..bc1aaab`)
+  - `pytest tests/unit/ -v`: **33/33 passed** in 0.11s (Python 3.12.13,
+    pytest 8.4.2), matching the local sandbox result before pushing
+  - Built and saved a real demo manifest (2 mimic-fixture records) to
+    `/content/drive/MyDrive/FactMM-RAG-Enhanced/data/manifests/demo_manifest.json`
+    — first real write to the persistent Drive location
+  - Directly inspected the raw saved JSON: confirmed neither record's
+    `finding` nor `impression` text appears anywhere in it
+  - `load()` round-trip confirmed identical to the original manifest
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: `demo_manifest.json` on Drive (persistent —
+  intentionally, unlike every prior cell's artifacts)
+- **Next step**: all 5 planned Milestone 2.1 classes are now
+  implemented and individually tested. Next: an end-to-end smoke test
+  chaining all of them together (per the project's per-milestone
+  workflow step "run a smoke test", not yet done — each class has only
+  been tested in isolation so far).
