@@ -143,3 +143,25 @@ run.
 - **Generated artifacts**: none (process-local state only: `sys.path`,
   RNG seeds — not persisted, must be redone every fresh runtime)
 - **Next step**: Cell 07 — Data Availability and Directory Validation
+
+---
+
+## Cell 07 — Data Availability and Directory Validation
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–06
+- **Key outputs**:
+  - Created `data/mimic/` and `data/chexpert/` under `LOCAL_ROOT`
+  - Confirmed, as expected, that no real MIMIC-CXR/CheXpert files exist
+    yet locally or on Drive (`train.json`/`valid.json`/`test.json` all
+    `[not found]`)
+  - Printed clear instructions for where to place real data later
+    (Drive-persistent location), and confirmed no automatic download
+    was attempted
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: two empty local directories
+  (`data/mimic/`, `data/chexpert/`)
+- **Next step**: setup complete (Cells 01–07). Milestone 2.1
+  implementation begins: `ReportRecord` in `src/data/schema.py`.
