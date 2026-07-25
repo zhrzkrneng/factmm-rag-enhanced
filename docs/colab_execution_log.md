@@ -25,3 +25,23 @@ run.
 - **Fix applied**: n/a
 - **Generated artifacts**: none (inspection-only cell)
 - **Next step**: Cell 02 — Mount Google Drive
+
+---
+
+## Cell 02 — Mount Google Drive
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cell 01
+- **Key outputs**:
+  - Drive mounted at `/content/drive`
+  - `LOCAL_ROOT = /content/factmm-rag-enhanced`
+  - `PERSIST_ROOT = /content/drive/MyDrive/FactMM-RAG-Enhanced`
+  - `PERSIST_DATA_DIR = .../FactMM-RAG-Enhanced/data`
+  - `PERSIST_MANIFEST_DIR = .../FactMM-RAG-Enhanced/data/manifests`
+  - All three persistent directories newly `[created]` (first run)
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: three empty directories on Google Drive
+  (`FactMM-RAG-Enhanced/`, `.../data/`, `.../data/manifests/`) — no files
+- **Next step**: Cell 03 — Repository Cloning

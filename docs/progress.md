@@ -34,8 +34,8 @@ then one cell at a time through the data pipeline classes described in
 the Milestone 2.1 architecture explanation).
 
 - [x] Cell 01 — Environment Inspection — **SUCCESS**
-- [ ] Cell 02 — Mount Google Drive — code provided, awaiting execution
-- [ ] Cell 03 — Repository Cloning
+- [x] Cell 02 — Mount Google Drive — **SUCCESS**
+- [ ] Cell 03 — Repository Cloning — code provided, awaiting execution
 - [ ] Cell 04 — Dependency Installation
 - [ ] Cell 05 — Import and Version Verification
 - [ ] Cell 06 — Configuration and Reproducibility Setup
@@ -46,4 +46,4 @@ the Milestone 2.1 architecture explanation).
 
 ## Next Step
 
-Run Cell 02 in Colab and report the output.
+Run Cell 03 in Colab and report the output.
