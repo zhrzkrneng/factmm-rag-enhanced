@@ -206,3 +206,23 @@ run.
 - **Generated artifacts**: none new
 - **Next step**: implement `IntegrityChecker` (`src/data/integrity.py`)
   and the exception types it needs (`src/common/exceptions.py`)
+
+---
+
+## Cell 10 — `IntegrityChecker` Import and Test
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–09
+- **Key outputs**:
+  - `git pull` fast-forwarded cleanly (`a5c29ce..38adf11`)
+  - `pytest tests/unit/ -v`: **21/21 passed** in 0.08s (Python 3.12.13,
+    pytest 8.4.2), matching the local sandbox result before pushing
+  - Demonstration on `sample_mimic.json`: exactly 2 `missing_image_file`
+    issues (the synthetic paths don't correspond to real files), no
+    finding/impression/duplicate issues — matching the asserted
+    expectation in the cell itself
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: none new
+- **Next step**: implement `PatientSplitValidator` (`src/data/splits.py`)

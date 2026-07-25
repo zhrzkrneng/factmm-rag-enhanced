@@ -42,10 +42,10 @@ the Milestone 2.1 architecture explanation).
 - [x] Cell 07 — Data Availability and Directory Validation — **SUCCESS** (no real data present yet, as expected; skeleton created)
 - [x] Cell 08 — `ReportRecord` implementation + unit tests — **SUCCESS** (7/7 tests passed)
 - [x] Cell 09 — `JsonReportParser` implementation + unit tests — **SUCCESS** (12/12 tests passed)
-- [ ] Cell 10 — `IntegrityChecker` + exception types implementation + unit tests — in progress
-- [ ] (subsequent cells implementing `PatientSplitValidator`,
-      `ManifestBuilder` — one class/cell at a time, not yet written)
+- [x] Cell 10 — `IntegrityChecker` + exception types implementation + unit tests — **SUCCESS** (21/21 tests passed)
+- [ ] Cell 11 — `PatientSplitValidator` implementation + unit tests — in progress
+- [ ] (subsequent cell implementing `ManifestBuilder` — not yet written)
 
 ## Next Step
 
-Run Cell 10 in Colab and report the output.
+Run Cell 11 in Colab and report the output.
