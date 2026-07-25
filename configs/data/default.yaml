@@ -1,0 +1,4 @@
+# Responsibility: dataset paths, split manifests, and preprocessing
+# options (frontal-view selection, finding+impression concatenation)
+# consumed by src/data. No values populated yet — this is a structural
+# placeholder only, per Phase 1 (no implementation yet).

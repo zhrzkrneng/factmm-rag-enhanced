@@ -1,0 +1,8 @@
+# Responsibility: baseline reproduction hyperparameters — pair-mining
+# thresholds (chexbert_threshold, radgraph_threshold, top_k), retriever
+# training settings (epochs, batch size, learning rate, temperature vs.
+# learned logit_scale), and generator settings — consumed by
+# src/baseline. No values populated yet — this is a structural
+# placeholder only, per Phase 1 (no implementation yet). See
+# docs/risk_register.md #1b/#1c for the two settings that must be
+# exposed here as explicit, documented choices rather than hard-coded.

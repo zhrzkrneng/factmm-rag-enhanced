@@ -1,0 +1,5 @@
+# Responsibility: named experiment configs that compose a data config, a
+# baseline or innovation config, and a random seed into one reproducible
+# run definition, for the Phase 5 experiment matrix (docs/innovation_
+# proposals.md). No values populated yet — this is a structural
+# placeholder only, per Phase 1 (no implementation yet).
