@@ -226,3 +226,25 @@ run.
 - **Fix applied**: n/a
 - **Generated artifacts**: none new
 - **Next step**: implement `PatientSplitValidator` (`src/data/splits.py`)
+
+---
+
+## Cell 11 — `PatientSplitValidator` Import and Test
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–10
+- **Key outputs**:
+  - `git pull` fast-forwarded cleanly (`38adf11..eba3b62`)
+  - `pytest tests/unit/ -v`: **28/28 passed** in 0.07s (Python 3.12.13,
+    pytest 8.4.2), matching the local sandbox result before pushing
+  - Demonstration correctly found exactly 1 leak (`p1` in
+    `('test', 'train')`) and correctly did **not** flag `p2`'s two
+    same-split studies; `check_and_raise()` raised `PatientLeakageError`
+    as expected
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: none new
+- **Next step**: implement `ManifestBuilder` (`src/data/manifest.py`)
+  and its schema (`src/common/manifest.py`) — the last class planned
+  for Milestone 2.1

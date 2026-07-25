@@ -43,9 +43,9 @@ the Milestone 2.1 architecture explanation).
 - [x] Cell 08 — `ReportRecord` implementation + unit tests — **SUCCESS** (7/7 tests passed)
 - [x] Cell 09 — `JsonReportParser` implementation + unit tests — **SUCCESS** (12/12 tests passed)
 - [x] Cell 10 — `IntegrityChecker` + exception types implementation + unit tests — **SUCCESS** (21/21 tests passed)
-- [ ] Cell 11 — `PatientSplitValidator` implementation + unit tests — in progress
-- [ ] (subsequent cell implementing `ManifestBuilder` — not yet written)
+- [x] Cell 11 — `PatientSplitValidator` implementation + unit tests — **SUCCESS** (28/28 tests passed)
+- [ ] Cell 12 — `ManifestBuilder` + schema implementation + unit tests — in progress (last planned class for Milestone 2.1)
 
 ## Next Step
 
-Run Cell 11 in Colab and report the output.
+Run Cell 12 in Colab and report the output.
