@@ -36,8 +36,8 @@ the Milestone 2.1 architecture explanation).
 - [x] Cell 01 — Environment Inspection — **SUCCESS**
 - [x] Cell 02 — Mount Google Drive — **SUCCESS**
 - [x] Cell 03 — Repository Cloning — **SUCCESS** (public repo, no PAT needed)
-- [ ] Cell 04 — Dependency Installation — code provided, awaiting execution
-- [ ] Cell 05 — Import and Version Verification
+- [x] Cell 04 — Dependency Installation — **SUCCESS** (faiss-cpu newly installed; rest already satisfied)
+- [ ] Cell 05 — Import and Version Verification — code provided, awaiting execution
 - [ ] Cell 06 — Configuration and Reproducibility Setup
 - [ ] Cell 07 — Data Availability and Directory Validation
 - [ ] (subsequent cells implementing `ReportRecord`, parsers,
@@ -46,4 +46,4 @@ the Milestone 2.1 architecture explanation).
 
 ## Next Step
 
-Run Cell 04 in Colab and report the output.
+Run Cell 05 in Colab and report the output.

@@ -70,3 +70,28 @@ run.
 - **Generated artifacts**: full repository checkout at
   `/content/factmm-rag-enhanced` (ephemeral, local disk)
 - **Next step**: Cell 04 — Dependency Installation
+
+---
+
+## Cell 04 — Dependency Installation
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–03
+- **Key outputs**:
+  - `pip install -r requirements.txt` completed with return code 0
+  - Most packages (`torch`, `torchvision`, `transformers`, `datasets`,
+    `pandas`, `numpy`, `scikit-learn`, `pyyaml`, `tqdm`, `pytest`) were
+    already satisfied by the base Colab image
+  - `faiss-cpu` was newly installed: `faiss_cpu-1.14.3` (18.5 MB wheel)
+  - All 11 requirements.txt packages confirmed via `pip show`
+  - First response paste was cut off mid-output (ended at `numpy`);
+    re-confirmed with the full tail showing all 11 `[OK]` lines and the
+    final "All requirements.txt packages confirmed installed." message
+    before logging this as SUCCESS, per the rule against assuming
+    success without seeing it
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: installed Python packages in the runtime's
+  site-packages (ephemeral, not on Drive)
+- **Next step**: Cell 05 — Import and Version Verification
