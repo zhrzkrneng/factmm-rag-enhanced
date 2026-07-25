@@ -1,329 +1,350 @@
 # Paper Analysis: FactMM-RAG
 
-## Paper Access Status — READ THIS FIRST
+## Paper Access Status
 
-**`paper/factmm_rag.pdf` does not exist in this repository yet** (only a
-`.gitkeep` placeholder is present). Per CLAUDE.md, no implementation detail
-may be fabricated, so this document does **not** claim to summarize the full
-paper text.
+**`paper/factmm_rag.pdf` is now available** (uploaded by the user directly
+to the repository's `main` branch and merged into this branch). This
+document has been rewritten against the actual paper text
+(arXiv:2407.15268v2, "Fact-Aware Multimodal Retrieval Augmentation for
+Accurate Medical Radiology Report Generation," Liwen Sun*, James Zhao*,
+Megan Han, Chenyan Xiong — Carnegie Mellon University; *equal contribution).
+Claims are now labeled `PAPER_EXPLICIT` where directly stated in the text,
+`OFFICIAL_REPOSITORY` where sourced from the cloned code, and flagged
+explicitly wherever the two sources **disagree** — this is the most
+important output of this revision, since silently trusting either source
+alone would hide real discrepancies.
 
-Two independent attempts were made to obtain the paper directly:
+## 1. Research Problem (`PAPER_EXPLICIT`)
 
-1. Cloning the official GitHub repository (`cxcscmu/FactMM-RAG`) —
-   **succeeded**. Its `README.md`, scripts, and configuration values are used
-   throughout this document and are labeled `OFFICIAL_REPOSITORY`.
-2. Fetching the arXiv abstract/HTML page (`arxiv.org/abs/2407.15268`) —
-   **blocked by the sandbox's outbound network policy** (the proxy rejects
-   `CONNECT` to `arxiv.org` with a 403; `github.com` is allowed). This is an
-   environment/policy restriction, not a code problem, and it was not
-   bypassed.
+Multimodal foundation models show promise for automating chest radiology
+report generation, but suffer from hallucinated, factually inaccurate
+output. Retrieval-Augmented Generation (RAG) can ground generation in
+retrieved evidence, but building a medical multimodal retriever is hard
+because it must bridge symptomatic image semantics and factually-equivalent
+report text. Prior medical multimodal retrievers (GLoRIA, MedCLIP,
+CXR-CLIP, BiomedCLIP, etc.) "neglect specific image information and do not
+adequately emphasize factual accuracy, resulting in imprecision when
+retrieving radiology reports."
 
-**Action required from the user:** upload `paper/factmm_rag.pdf` (or paste
-its text) so the sections below can be completed and re-labeled
-`PAPER_EXPLICIT` where appropriate. Until then, every claim in this document
-is sourced from the official repository's code/README, or is explicitly
-marked `UNKNOWN`. Nothing here should be treated as a verified paper claim.
+## 2. Claimed Contributions (`PAPER_EXPLICIT`, verbatim from Introduction)
 
-Bibliographic facts below **are** confirmed, because they come from the
-official repo's own `README.md` citation block (`OFFICIAL_REPOSITORY`):
+1. A fact-aware medical multimodal retriever to augment multimodal
+   foundation models in generating accurate chest X-ray radiology reports.
+2. A method for mining factually-informed radiology report pairs that
+   trains multimodal encoders to retrieve high-quality reference reports.
+3. A demonstration that, on two benchmark datasets, this retriever
+   outperforms state-of-the-art medical multimodal retrievers on both
+   language generation and clinically relevant metrics.
 
-| Field | Value | Source |
-|---|---|---|
-| Title | Fact-Aware Multimodal Retrieval Augmentation for Accurate Medical Radiology Report Generation | OFFICIAL_REPOSITORY |
-| Venue | NAACL 2025 | OFFICIAL_REPOSITORY |
-| arXiv ID | 2407.15268 | OFFICIAL_REPOSITORY |
-| Authors | Liwen Sun, James Zhao, Megan Han, Chenyan Xiong | OFFICIAL_REPOSITORY |
-| Official repo | https://github.com/cxcscmu/FactMM-RAG | OFFICIAL_REPOSITORY |
-| License (official code) | MIT | OFFICIAL_REPOSITORY |
+## 3. Complete Pipeline (`PAPER_EXPLICIT`, Section 3, cross-checked against code)
 
----
+1. **Chest radiograph annotation**: RadGraph extracts structured entities
+   (e.g., carina, lungs, abnormalities) and clinical relations (e.g.,
+   modify, located at, suggestive of) from each report's free text, stored
+   as `[(entity, label, relation), ...]` per report.
+2. **Factual report pair mining**:
+   - First, restrict candidates to reports sharing "the same symptom"
+     (diagnostic label) as the query, to reduce false negatives.
+   - Then compute a RadGraph-based factual similarity between query and
+     candidate report (Eq. 1):
+     `s(q,d) = 2·|q̂ ∩ d̂| / (len(q̂) + len(d̂))`, where `q̂`/`d̂` are the
+     RadGraph-annotated (entity+relation) forms of the two reports — this
+     is the standard F1-style RadGraph reward.
+   - Keep candidates with `s(q,d) > δ` as positive pairs `N_q` (Eq. 2).
+   - **This exactly matches the official code's two-part mask**
+     (`chexbert_sim >= chex_thresh` AND `radgraph_sim >= radg_thresh`):
+     the paper's "same symptom" pre-filter corresponds to the code's
+     `chex_thresh=1.0` (exact 5-label match), and the paper's `δ`
+     corresponds to the code's `radg_thresh` (`0.4` in shipped scripts).
+     What looked like an unexplained combined-threshold design in the code
+     audit is confirmed by the paper's narrative.
+3. **Multimodal dense retrieval training**: a single universal encoder,
+   **MARVEL** (Zhou et al. 2024), encodes the query image alone
+   (`q = MARVEL(q_img)`, Eq. 3) and each candidate as an image+text pair
+   (`d = MARVEL(d_txt, d_img)`, Eq. 4). Relevance is cosine similarity
+   (Eq. 5). Trained with an InfoNCE-style contrastive loss (Eq. 6) using
+   mined positives `d+` and in-batch negatives `d-` (Karpukhin et al. 2020,
+   DPR-style), with temperature `τ`.
+4. **Retrieval-augmented generation**: encode the query image, retrieve the
+   **single highest-relevance** report from the training corpus, and pass
+   image + retrieved report into a multimodal foundation model (LLaVA),
+   fine-tuned with standard autoregressive language-modeling loss (Eq. 7)
+   over the ground-truth report.
 
-## 1. Research Problem
+## 4. Datasets (`PAPER_EXPLICIT`)
 
-- **OFFICIAL_REPOSITORY**: The repo README states the goal as "a fact-aware
-  multimodal retrieval-augmented pipeline for generating accurate radiology
-  reports" — i.e., using retrieval of similar prior reports to condition
-  report generation from chest X-ray images, with retrieval driven by
-  *factual* (not just semantic) similarity.
-- **UNKNOWN**: The paper's full motivating narrative, related-work framing,
-  and precise problem statement wording — pending PDF.
+- **MIMIC-CXR** (Johnson et al. 2019), processed per Delbrouck et al. 2023
+  (the vilmedic ACL-2023 RadSum23 split): **125,417 training**, **991
+  validation**, **1,624 test** image-report pairs, from Beth Israel
+  Deaconess Medical Center. Used to train **both** the retriever and the
+  foundation model.
+- **CheXpert** (Irvin et al. 2019), Stanford Health Care: used **only** for
+  **zero-shot evaluation** — 1,000 test pairs (the "hidden test set" from
+  MIMIC-CXR-RRS, with CheXpert images downloaded separately from Stanford
+  AIMI). This confirms what was previously `REASONABLE_INFERENCE` — the
+  official repo ships only a CheXpert `test.json` placeholder because
+  CheXpert is genuinely evaluation-only, never a training source.
 
-## 2. Claimed Contributions
+## 5. Preprocessing (`PAPER_EXPLICIT`)
 
-- **UNKNOWN** (pending PDF). The official repo's README schedule/checklist
-  implies at least three deliverable components were released: data
-  preprocessing, factual report-pair mining, and retriever training code,
-  with generator training code explicitly marked as a separate, later
-  release. This suggests the retriever and its factual-pair-mining strategy
-  are a central contribution, but this is `REASONABLE_INFERENCE`, not a
-  quoted claim.
+- Frontal view is explicitly selected ("Since each radiology study contains
+  multiple image views for each patient, we select the frontal view") —
+  confirms the `image[0]` convention seen in code is intentional, not
+  incidental (previously flagged as an open question — now resolved).
+- Finding and impression sections are concatenated to form the report text
+  used for the retriever's candidate/text side.
 
-## 3. Complete Pipeline (as implemented in the official repository)
+## 6. RadGraph Annotation (`PAPER_EXPLICIT` + `OFFICIAL_REPOSITORY`)
 
-`OFFICIAL_REPOSITORY` — reconstructed by reading the code, in execution order:
+RadGraph performs NER + relation extraction to build the structured
+entity/relation representation described above. The paper does not name an
+exact RadGraph package version; the official code pins `radgraph==0.0.9`
+(`OFFICIAL_REPOSITORY`) — treat this pin as the operative version for
+reproduction, per project rules against inventing missing detail.
 
-1. **Parsing** (`data/parse.py`): combine per-line image path(s), findings,
-   and impressions text files into a single JSON list of
-   `{"image": [...], "finding": ..., "impression": ...}` records. Only the
-   **first** listed image path is used downstream as the primary image.
-2. **Annotation** (`data/label.py`): run `RadGraph` (entities/relations) and
-   `F1CheXbert` (14-class labels) over each report's `finding` text; store a
-   5-class label subset (`Cardiomegaly, Edema, Consolidation, Atelectasis,
-   Pleural Effusion`) plus RadGraph entities per report.
-3. **Factual similarity scoring** (`data/factual_mining/build_pos_*/gen_similarity.py`):
-   for every query report against every corpus report, compute:
-   - **CheXbert similarity**: fraction of the 5 labels that match exactly.
-   - **RadGraph similarity**: an "exact entity token if relation exists"
-     F1-style reward comparing entity+label (and relation-existence) sets
-     between two reports (`utils.py:exact_entity_token_if_rel_exists_reward`).
-   Computed as an all-pairs matrix, chunked for parallel (SLURM array) jobs.
-4. **Top-k positive mining** (`gen_topk_pos.py` / `merge_topk_pos.py`):
-   combine CheXbert + RadGraph similarity, apply a **pre-mask** requiring
-   `chexbert_sim >= chex_thresh` **and** `radgraph_sim >= radg_thresh`, then
-   take the top-`k` remaining candidates as positive references for each
-   query. Self-retrieval is explicitly detected and optionally dropped
-   (`--ignore_self`); rows whose self-similarity looks degenerate can be
-   flagged as "bad samples" and skipped (`--skip_bad_sample`).
-   Production values used in the shipped `.sh` scripts:
-   `chex_thresh=1.0`, `radg_thresh=0.4`, `top_k=3`.
-5. **Retriever training** (`src/retriever/DPR`, then `src/retriever/ANCE`):
-   a dual/multi-modal encoder (see §7) trained with in-batch-negative
-   contrastive loss against the mined positive pairs; a second ANCE-style
-   stage adds mined **hard negatives**.
-6. **Embedding export + indexing** (`gen_embeddings.py`, FAISS `IndexFlatIP`
-   / `IndexIVFFlat`): encode all images/reports, build a FAISS index over
-   corpus (typically training-set) report embeddings.
-7. **Retrieval / KNN construction** (`src/generator/knn.py`,
-   `src/retriever/DPR/retrieval.py`): for each query image embedding,
-   retrieve nearest corpus report embeddings.
-8. **RAG dataset construction** (`src/generator/build_rag_dataset.py`):
-   pick the highest-ranked retrieved candidate that is **not** from the same
-   study or the same patient (explicit patient/study-leakage filter) and,
-   optionally, not "too short"; embed it into a fixed prompt template (see
-   §9); build LLaVA-format conversational (train) or inference (test) JSON.
-9. **Generation** (LLaVA fine-tuning/inference, `install_llava.sh`,
-   `train_llava.sh`, `inference_llava.sh`): a vision-language model
-   generates a report from the image + retrieved-report-conditioned prompt.
-10. **Evaluation** (`src/evaluation.py`): F1RadGraph, F1CheXbert (5-class
-    micro-F1), ROUGE-L, BLEU-4, BERTScore over generated vs. reference text.
+## 7. Factual Pair Mining — Thresholds
 
-## 4. Datasets
+- **Discrepancy found (flag for `docs/risk_register.md`)**: the paper's
+  Implementation Details state "we rerank the retrieved reports by factual
+  similarity and use the **top 2** factual report pairs for each query to
+  train our multimodal retriever" (`PAPER_EXPLICIT`). The shipped
+  `gen_topk_pos.sh` / `train.sh` scripts in the official repository use
+  **`top_k=3`** (`OFFICIAL_REPOSITORY`). This is a real, unresolved
+  mismatch between the paper text and the released code's default
+  configuration — not something to silently pick one side of. This
+  project's config will expose `top_k` as a parameter and run both values,
+  documenting which one reproduces paper-reported numbers more closely.
+- Threshold values `chexbert_threshold=1.0`, `radgraph_threshold=0.4` match
+  between paper's Figure 2d (F1CheXbert threshold = 1, which the paper
+  shows is the best-performing setting among {0, 0.4, 0.8, 1}) and the
+  code's shipped defaults — `PAPER_EXPLICIT` + `OFFICIAL_REPOSITORY`,
+  consistent.
+- The paper explicitly studies threshold sensitivity as an ablation
+  (Section 5.3, Figures 2–3): sweeping F1CheXbert ∈ {0, 0.4, 0.8, 1} and
+  F1RadGraph ∈ {0.2, 0.3, 0.4, 0.5, 0.6}. Finding: stricter thresholds
+  saturate/plateau and can exclude too many useful pairs; F1RadGraph
+  threshold alone (without any CheXbert label filtering) can also mine
+  effective pairs, showing the method doesn't strictly require diagnostic
+  label supervision.
 
-- **OFFICIAL_REPOSITORY**: MIMIC-CXR (via the vilmedic ACL-2023 preprocessed
-  split, per README link) and CheXpert (Stanford AIMI). `data/mimic/` holds
-  `train.json` / `valid.json` / `test.json`; `data/chexpert/` holds
-  `test.json` only in the shipped repo (only a 1-record schema example is
-  present in both — real data is not distributed with the code).
-- **OFFICIAL_REPOSITORY**: the shipped SLURM script
-  `gen_topk_pos.sh` hard-codes `--n 125417`, implying the MIMIC-CXR training
-  split used contained **125,417** report records.
-- **UNKNOWN**: exact CheXpert split sizes, exact MIMIC-CXR train/valid/test
-  counts as reported in the paper's dataset table, and any additional
-  filtering criteria beyond what's visible in code.
+## 8. Retriever Architecture (`PAPER_EXPLICIT` + `OFFICIAL_REPOSITORY`)
 
-## 5. Preprocessing
+- Backbone: **MARVEL** (Zhou et al. 2024), built on **T5-ANCE** (text) and
+  a **Vision Transformer** (Dosovitskiy et al. 2021). The paper describes
+  the vision encoder generically as "a vision transformer"; the official
+  code's specific choice is `CLIPVisionModel`
+  (`openai/clip-vit-base-patch32`) — a ViT-B/32 — which is consistent, just
+  more specific than the paper's wording.
+- Two MARVEL initialization checkpoints are compared: **WebQA** and
+  **ClueWeb** (both from Zhou et al. 2024's MARVEL release); ClueWeb gives
+  a marginal edge, attributed to larger pretraining scale
+  (`PAPER_EXPLICIT`, Section 5.2). The headline "FactMM-RAG" numbers in
+  Table 1 correspond to the **ClueWeb** checkpoint + LLaVA-1.5 (confirmed
+  by matching values against the `ClueWeb-LLaVA1.5` row in Table 2).
+- **Loss temperature discrepancy (flag)**: the paper's Appendix A.1 states
+  a fixed temperature hyperparameter **τ = 0.01** for the contrastive loss
+  (Eq. 6). The official code's `train.py` instead uses a **learned**
+  `logit_scale` parameter initialized from a pretrained `CLIPModel`
+  (typically initialized near `ln(1/0.07)`, i.e. an effective starting
+  temperature around 0.07, not 0.01, and trainable rather than fixed). This
+  is a genuine, currently unresolved discrepancy between the paper's stated
+  hyperparameter and the released training script's actual mechanism —
+  flagged in the risk register, not silently resolved in either direction.
 
-- **OFFICIAL_REPOSITORY**: reports are split into `finding` and
-  `impression` fields upstream of this repo (already split before
-  `parse.py` runs); `parse.py` only merges parallel line-based `.tok` files.
-- **OFFICIAL_REPOSITORY**: only the **first** path in a study's `image`
-  list is used as the "primary" image in `parse.py`'s output entry
-  construction is at the raw-file level (multiple paths kept in the JSON
-  `image` array), but the retriever's `MedDataset` always indexes
-  `example['image'][0]` — i.e., a single (frontal, by MIMIC-CXR convention)
-  view is used for encoding. **REASONABLE_INFERENCE**: this implements the
-  "frontal view" selection mentioned in our project rules, but the paper's
-  own justification/verification of frontal-view selection is `UNKNOWN`.
+## 9. Generator Architecture (`PAPER_EXPLICIT`)
 
-## 6. RadGraph Annotation
+- **LLaVA-1.5**, initialized from a **vicuna-7b-v1.5** checkpoint (Appendix
+  A.2). LLaVA-1.6 is also tested as a backbone-variation ablation (Table 2,
+  `ClueWeb-LLaVA1.6`), with similar performance to 1.5.
+- Prompt templates (Figure 5, `PAPER_EXPLICIT`, matches `build_rag_dataset.py`):
+  - Non-RAG (VQA): `Generate a radiology report from this image:\n<image>`
+  - RAG: `Here is a report of a related patient:\n"<document>"\nGenerate a radiology report from this image:\n<image>`
 
-- **OFFICIAL_REPOSITORY**: uses the `radgraph` PyPI package (pinned
-  `radgraph==0.0.9` in `requirements.txt`), invoked as `RadGraph()([report])`,
-  returning per-report `entities` (with `tokens`, `label`, `relations`).
-- **UNKNOWN**: which underlying RadGraph model checkpoint/version
-  (`radgraph` vs `radgraph-xl`, inference vs. reward variant) is used;
-  the package's default is treated as authoritative here but this should be
-  re-confirmed once the paper is available, since RadGraph has multiple
-  released variants.
+## 10. Training Objectives & Hyperparameters (`PAPER_EXPLICIT`, Appendix A.1–A.2)
 
-## 7. Factual Pair Mining
+**Retriever training** (matches `train.py` defaults exactly, giving high
+confidence both sources describe the same run):
+AdamW optimizer, `epochs=15`, `early_stop=5`, `batch_size=32`,
+`learning_rate=5e-6`, contrastive temperature `τ=0.01` (see discrepancy in
+§8), modality-balanced hard negatives added after the in-batch-negative
+stage (ANCE-style second stage), trained on **1x NVIDIA RTX A6000 for ~10
+hours**.
 
-Covered in §3 steps 3–4. Configurable knobs identified in code
-(`OFFICIAL_REPOSITORY`):
-- `chexbert_threshold` (default `1` in mining scripts, i.e. exact match of
-  all 5 labels)
-- `radgraph_threshold` (default `0.4`)
-- `top_k` positives per query (`3` in shipped scripts)
-- `ignore_self`, `skip_bad_sample` toggles
+**RAG fine-tuning (LLaVA)** — this fills a major gap the official code left
+unspecified: `epochs=1`, `learning_rate=2e-5`, `global_batch_size=128`,
+initialized from `vicuna-7b-v1.5`, trained on **8x NVIDIA RTX A6000 for ~4
+hours**. Checkpoint saved after one full pass for final evaluation.
 
-## 8. Retriever Architecture
+## 11. Negative Sampling (`PAPER_EXPLICIT` + `OFFICIAL_REPOSITORY`)
 
-`OFFICIAL_REPOSITORY` (`src/retriever/DPR/multi_model.py`):
-- Vision tower: `CLIPVisionModel` (default `openai/clip-vit-base-patch32`),
-  patch tokens (excluding CLS) linearly projected into the text model's
-  hidden size.
-- Text/query tower: `T5ForConditionalGeneration`
-  (default `OpenMatch/t5-ance` — the **MARVEL** checkpoint referenced in the
-  README, "Checkpoint: MARVEL", is loaded as `--pretrained_model_path`).
-- Fusion: image patch embeddings are spliced into the T5 encoder's input
-  embedding sequence in place of image placeholder tokens
-  (`<im_start><im_patch>*N<im_end>`), i.e. a MARVEL/LLaVA-style
-  patch-token-splicing scheme, not a separate late-fusion pooling.
-- A single `logit_scale` parameter (initialized from a `CLIPModel` instance)
-  scales the similarity matrix, CLIP-style.
-- Query representation = image only (`forward(images, text_inputs=None)`).
-  Candidate representation = image + prompt-wrapped report text
-  (`forward(images, text_inputs)`), i.e. retrieval is *image-to-report*
-  where the candidate side is also conditioned on its own image.
-- **UNKNOWN**: whether the paper describes an alternative/ablated
-  text-only or image-only retriever variant beyond what's in code.
+Two stages, confirming the earlier code-only reading: (1) in-batch
+negatives during the initial dense-retrieval training stage; (2)
+modality-balanced **hard negatives**, following Yu et al. 2023a / Zhou et
+al. 2024 (MARVEL's own hard-negative recipe) — the paper does not restate
+the code's specific hard-negative mining thresholds
+(`chexbert_threshold=1`, `radgraph_threshold=0.4`, `topN=100`,
+`num_top_neg=2`), so those numeric specifics remain sourced only from
+`OFFICIAL_REPOSITORY`.
 
-## 9. Generator Architecture
+## 12. Retrieval Strategy at Inference (`PAPER_EXPLICIT`)
 
-`OFFICIAL_REPOSITORY`:
-- LLaVA (vision-language instruction-tuned LLM), per `install_llava.sh`
-  (`haotian-liu/LLaVA`, pinned to a specific commit) — trained/fine-tuned
-  via `train_llava.sh`, inference via `inference_llava.sh`.
-- Exact prompt template (`build_rag_dataset.py`):
-  `Here is a report of a related patient: "{retrieved_doc}"\nGenerate a
-  radiology report from this image:<image>` (conversational/training form),
-  with the reference answer being the query's own `finding` or `impression`
-  text (`output_data_mode`).
-- **UNKNOWN**: the generator training code was explicitly marked
-  **unreleased** in the README schedule at clone time ("Release the
-  generator training code" is unchecked) even though `train_llava.sh` /
-  `inference_llava.sh` scripts exist — treat generator reproducibility as
-  higher-risk pending manual verification (see risk register).
+Exactly one report retrieved per query image (highest cosine-similarity
+match), confirming the baseline never does multi-report retrieval — this
+is squarely what Innovation A (adaptive multi-report retrieval) extends
+beyond.
 
-## 10. Training Objectives
+## 13. Generation Strategy (`PAPER_EXPLICIT`)
 
-`OFFICIAL_REPOSITORY` (`src/retriever/DPR/train.py`):
-- In-batch contrastive loss: cosine similarity (L2-normalized embeddings)
-  scaled by `logit_scale.exp()`, cross-entropy against the diagonal
-  (matching query/positive pairs), i.e. a standard InfoNCE/CLIP-style
-  symmetric-free (single-direction: query→candidate) softmax loss.
-- Optimizer: AdamW, `betas=(0.9, 0.98)`, `eps=1e-6`; weight decay `0.2` on
-  ≥2-D non-bias/norm/logit_scale params, `0.0` elsewhere (CLIP-style
-  parameter grouping).
-- LR `5e-6`, cosine schedule with warmup (`warmup_steps=0.1`, interpreted as
-  a *fraction* of total steps), `num_train_epochs=15`, batch size `32`,
-  early stopping on dev accuracy (`patience=5` eval rounds).
-- ANCE stage (`src/retriever/ANCE/train.py`) — **not yet read in full**;
-  based on `train.sh` it re-initializes from the DPR checkpoint and adds
-  `--train_neg_path` / `--valid_neg_path` hard-negative files.
+Single retrieved report is embedded into the fixed RAG prompt template
+(§9) alongside the query image; LLaVA generates the report autoregressively.
 
-## 11. Negative Sampling
+## 14. Baselines (`PAPER_EXPLICIT`, Section 4 "Baselines")
 
-`OFFICIAL_REPOSITORY`:
-- **Stage 1 (DPR)**: in-batch negatives only (other candidates in the same
-  training batch).
-- **Stage 2 (ANCE)**: adds mined hard negatives
-  (`gen_hard_negatives.py`) — for each query, retrieve top-`N=100` corpus
-  candidates by current DPR embeddings via FAISS, keep only candidates
-  whose CheXbert similarity `< 1.0` **and** RadGraph similarity `< 0.4`
-  (i.e., confirmed factually-dissimilar despite embedding closeness), sort
-  ascending by combined score, and keep the `num_top_neg=2` lowest-scoring
-  (most clearly negative) of those as hard negatives per query.
+- **Multimodal retrievers compared**: CLIP (Radford et al. 2021, general-
+  domain), GLoRIA (Huang et al. 2021), MedCLIP (Wang et al. 2022), CXR-CLIP
+  (You et al. 2023), BiomedCLIP (Zhang et al. 2024), Med-MARVEL (MARVEL
+  contrastively trained on each patient's *own* image-report pair, without
+  factual pair mining — the direct ablation target for isolating the
+  contribution of factual pair mining).
+- **Non-RAG comparisons**: "No Retriever" (direct LLaVA fine-tune, no
+  retrieval); ORGan (Hou et al. 2023, observation-plan + tree reasoning).
+- **Upper bound**: Oracle — retrieves the training-corpus report maximizing
+  `F1RadGraph + F1CheXbert` instance-wise similarity to the query
+  (excluding self for training queries; no such exclusion needed at test
+  time since the corpus is the training set) — see Appendix A.3 for the
+  exact `argmax` definition. This Oracle is **the paper's own upper-bound
+  baseline**, not a project invention — our reproduction matrix and
+  experiment design should reuse this exact definition rather than
+  re-deriving an oracle procedure.
 
-## 12. Retrieval Strategy (Inference)
+## 15. Evaluation Metrics (`PAPER_EXPLICIT`, Section 4 + Appendix A.3)
 
-`OFFICIAL_REPOSITORY`:
-- FAISS `IndexFlatIP` (exact) or `IndexIVFFlat` (approximate, `nlist`
-  configurable) over corpus embeddings; top-`k` search (`knn.py` default
-  `k=20`, `results_k=5` kept in output; `retrieval.py` hard-codes `3`).
-- Final report selection (`build_rag_dataset.py`) walks the ranked
-  candidates and picks the **first one that is not the same study and not
-  the same patient** as the query (and, optionally, not "too short"); if
-  none qualifies, falls back to the raw top-1 and logs an "anomaly".
-- Baseline generation therefore uses exactly **one** retrieved report per
-  query — multi-report retrieval is not present in the official baseline.
+- **ROUGE-L** (longest common subsequence F-measure) and **BERTScore**
+  (semantic similarity) for language fluency.
+- **F1CheXbert**: micro-averaged F1 over 5 CheXbert-labeled observations
+  (Cardiomegaly, Edema, Consolidation, Atelectasis, Pleural Effusion) —
+  dataset-level only; for instance-level scores (used during pair mining),
+  the paper uses the raw proportion of matching predicted classes
+  (`np.sum(ref==hyp)/5`, values in `{0, 0.2, 0.4, 0.6, 0.8, 1.0}`), matching
+  the code's `chexbert_similarity` function exactly.
+- **F1RadGraph**: instance-level `RG_ER` reward
+  (`reward_level="partial"` in the `radgraph` package), following the
+  MIMIC-CXR-RRS convention — matches `src/evaluation.py`'s default exactly.
+- **Statistical significance**: Table 1's caption states "FactMM-RAG
+  outperforms the best baseline with p-value < 0.05" — so the paper
+  **does** perform a significance test, contrary to what was assumed in
+  the original code-only audit. The paper does **not** specify which test
+  (paired t-test, bootstrap, permutation, etc.), so the exact procedure is
+  still `UNKNOWN` and must be treated as our own methodological choice to
+  document, not a reproduction of a specified test. Confidence intervals
+  are not reported at all in the paper — our bootstrap-CI plan
+  (Milestone 2.6) remains a genuine `PROPOSED_EXTENSION` beyond what the
+  paper provides, but the significance-testing half of that milestone is
+  now known to have *some* paper precedent, just an unspecified one.
+- BLEU-4 is computed in the official `evaluation.py` script but is **not**
+  reported anywhere in the paper's tables — treat BLEU-4 as an
+  `OFFICIAL_REPOSITORY`-only extra metric, not a paper-reported one.
 
-## 13. Generation Strategy
+## 16. Ablation Studies (`PAPER_EXPLICIT`, Section 5.2–5.4)
 
-Covered in §9. Single retrieved report concatenated into a fixed natural
-language prompt prefix, then standard LLaVA image+text generation.
+1. **Multimodal-retrieval-only setting** (Table 2, top): evaluate the
+   retriever alone (nearest report to test image vs. ground truth), without
+   running it through the generator — isolates retrieval quality from
+   generation quality.
+2. **Backbone variation** (Table 2, bottom): MARVEL init from WebQA vs.
+   ClueWeb checkpoints, and Med-MARVEL as an alternative retriever
+   backbone; LLaVA-1.5 vs. LLaVA-1.6 as the generator.
+3. **Fact-aware capability control** (Section 5.3, Figures 2–3): sweep
+   F1CheXbert/F1RadGraph mining thresholds; show F1RadGraph alone
+   (no CheXbert label filtering) still yields useful supervision.
+4. **Fact-aware capability propagation** (Section 5.4, Figure 4): tracks
+   MRR alongside F1CheXbert/F1RadGraph across training checkpoints,
+   showing retrieval quality gains propagate into generation quality gains.
+5. **Case studies** (Section 5.5, Tables 3–4): qualitative comparison of
+   FactMM-RAG vs. Med-MARVEL generated/retrieved reports against ground
+   truth, with per-example F1RadGraph and CheXbert-observation annotations.
 
-## 14. Baselines
+## 17. Reported Results (`PAPER_EXPLICIT`, Table 1 — the reproduction target)
 
-- **UNKNOWN** (pending PDF) for the paper's own reported baseline set
-  (e.g. non-RAG LLaVA, other RAG variants). The repo does provide a
-  **non-RAG VQA** LLaVA training path (`build_nonrag_dataset.py`,
-  `vqa/train_llava_vqa.sh`) as an apples-to-apples no-retrieval comparison
-  — `OFFICIAL_REPOSITORY`.
+| Dataset | Model | F1CheXbert | F1RadGraph | ROUGE-L | BERTScore |
+|---|---|---|---|---|---|
+| MIMIC-CXR | No Retriever | 0.496 | 0.234 | 0.294 | 0.549 |
+| MIMIC-CXR | ORGan | 0.541 | 0.240 | 0.308 | 0.552 |
+| MIMIC-CXR | CLIP | 0.507 | 0.241 | 0.300 | 0.552 |
+| MIMIC-CXR | GLoRIA | 0.476 | 0.232 | 0.294 | 0.543 |
+| MIMIC-CXR | MedCLIP | 0.517 | 0.238 | 0.298 | 0.549 |
+| MIMIC-CXR | CXR-CLIP | 0.501 | 0.243 | 0.302 | 0.553 |
+| MIMIC-CXR | BiomedCLIP | 0.502 | 0.233 | 0.293 | 0.546 |
+| MIMIC-CXR | Med-MARVEL | 0.537 | 0.237 | 0.306 | 0.549 |
+| MIMIC-CXR | **FactMM-RAG** | **0.602** | **0.257** | 0.307 | **0.561** |
+| MIMIC-CXR | Oracle | 0.972 | 0.523 | 0.495 | 0.677 |
+| CheXpert (zero-shot) | No Retriever | 0.371 | 0.173 | 0.231 | 0.469 |
+| CheXpert (zero-shot) | ORGan | 0.431 | 0.181 | 0.232 | 0.470 |
+| CheXpert (zero-shot) | CLIP | 0.381 | 0.172 | 0.231 | 0.468 |
+| CheXpert (zero-shot) | GLoRIA | 0.397 | 0.173 | 0.231 | 0.468 |
+| CheXpert (zero-shot) | MedCLIP | 0.408 | 0.182 | 0.238 | 0.471 |
+| CheXpert (zero-shot) | CXR-CLIP | 0.406 | 0.183 | 0.241 | 0.471 |
+| CheXpert (zero-shot) | BiomedCLIP | 0.380 | 0.173 | 0.232 | 0.469 |
+| CheXpert (zero-shot) | Med-MARVEL | 0.454 | 0.185 | 0.243 | 0.472 |
+| CheXpert (zero-shot) | **FactMM-RAG** | **0.475** | 0.185 | 0.236 | **0.475** |
+| CheXpert (zero-shot) | Oracle | 0.951 | 0.384 | 0.350 | 0.548 |
 
-## 15. Evaluation Metrics
+Retrieval-only setting (Table 2 top) and the 4 backbone-variation RAG
+configurations (Table 2 bottom) contain further comparison numbers; see the
+PDF directly for full precision when scoring our own reproduction against
+it.
 
-`OFFICIAL_REPOSITORY` (`src/evaluation.py`):
-- F1RadGraph (`reward_level="partial"` by default)
-- F1CheXbert, micro-avg F1 over the same 5-class subset used in mining
-- ROUGE-L (F-measure, via `Rouge` package)
-- BLEU-4 (`evaluate` library `bleu` metric, `precisions[3]`)
-- BERTScore (F1, `distilbert-base-uncased` by default, layer 5,
-  `rescale_with_baseline=True`)
-- Retrieval-side: MRR@{100,200,500,1000}, Recall@{100,200,500,1000},
-  NDCG@{100,200,500,1000} (`evaluate_retriever.py`, via `pytrec_eval`).
-- **Not present in official code**: bootstrap confidence intervals or
-  significance testing — these are requested project additions
-  (`PROPOSED_EXTENSION`, see Milestone 2.6), not part of the original
-  evaluation.
+## 18. Implementation Details (`PAPER_EXPLICIT` + `OFFICIAL_REPOSITORY`)
 
-## 16. Ablation Studies
+- Retriever: 1x NVIDIA RTX A6000, ~10 hours (paper).
+- RAG generator fine-tune: 8x NVIDIA RTX A6000, ~4 hours, 1 epoch (paper) —
+  this is a materially larger compute requirement than anything visible in
+  the code alone, and updates `docs/compute_requirements.md`.
+- Environment pins (retriever-stage): `torch==1.13.1`,
+  `transformers==4.23.1`, `radgraph==0.0.9`, `f1chexbert==0.0.2`
+  (`OFFICIAL_REPOSITORY` — the paper itself gives no package versions).
 
-**UNKNOWN** — pending PDF. No ablation-running scripts were found in the
-official repository beyond the DPR-vs-ANCE two-stage retriever comparison
-and the RAG-vs-non-RAG-VQA generator comparison already noted.
+## 19. Missing or Ambiguous Details (updated)
 
-## 17. Reported Results
+- **Resolved by the paper** (previously `UNKNOWN`, now `PAPER_EXPLICIT`):
+  dataset split sizes, CheXpert's zero-shot-only role, frontal-view
+  rationale, full baseline list, Oracle definition, generator hardware,
+  headline result numbers, presence (but not exact method) of significance
+  testing.
+- **Newly surfaced discrepancies** (paper vs. shipped code, both read in
+  full — see §7 and §8): `top_k` positives per query (paper: 2, code: 3);
+  contrastive temperature (paper: fixed τ=0.01, code: learned
+  `logit_scale`). These are not resolved by reading either source alone and
+  are logged in `docs/risk_register.md`.
+- **Still unknown**: exact RadGraph package/model version used by the
+  paper's authors (only the code's `0.0.9` pin is known); exact
+  significance-test procedure; per-checkpoint numeric values behind Figures
+  2–4 (only described qualitatively/graphically in the PDF, not tabulated).
 
-**UNKNOWN** — pending PDF. No results tables exist in the official
-repository (only a results-file *format* is defined in
-`evaluate_retriever.py`'s tab-separated output writer).
+## 20. Limitations (`PAPER_EXPLICIT`, Section 7, near-verbatim)
 
-## 18. Implementation Details (confirmed from code)
+- Scope is limited to chest radiology; not validated on other modalities
+  (e.g., brain scans, histology).
+- F1RadGraph/F1CheXbert don't capture report conciseness/clarity; no
+  evaluation directly aligned with human judgment or domain-expert review
+  of the pair-mining and evaluation procedure itself.
+- No long-tail evaluation using more fine-grained ground-truth labels.
 
-- Retriever-stage pinned environment: `torch==1.13.1`,
-  `transformers==4.23.1`, `faiss-cpu==1.10.0`, `radgraph==0.0.9`,
-  `f1chexbert==0.0.2`, `wandb==0.16.4` (`requirements.txt`).
-- Generator-stage (LLaVA) environment is **separate and incompatible**:
-  `install_llava.sh` upgrades to `transformers==4.36.2`, `peft==0.10.0`,
-  `accelerate==0.21.0`, `tokenizers==0.15.1` in its own conda env
-  (`OFFICIAL_REPOSITORY`) — this project must plan for two isolated
-  environments, not one.
-- Training used SLURM (`#SBATCH --gres=gpu:A6000:1`, 60G mem, 1-day time
-  limit for retriever training) — `OFFICIAL_REPOSITORY`, informs
-  `docs/compute_requirements.md`.
+## 21. Ethics (`PAPER_EXPLICIT`, Section 8)
 
-## 19. Missing or Ambiguous Details
-
-- Full paper text (motivation, related work, exact contribution list,
-  ablations, headline numbers) — **UNKNOWN**, pending PDF upload.
-- RadGraph model variant/version pinning beyond the PyPI package version.
-- Exact MIMIC-CXR/CheXpert split sizes and any exclusion criteria applied
-  before the `125,417`-row training corpus was reached.
-- Whether "frontal view selection" is an explicit, separately-validated
-  preprocessing step in the paper, or simply a byproduct of always taking
-  `image[0]`.
-- Generator training code was marked unreleased in the README checklist at
-  clone time, despite `.sh` scripts existing in `src/generator/` — treat as
-  needing manual verification, not as a confirmed-working reference
-  implementation.
-
-## 20. Limitations & Reproducibility Risks
-
-See `docs/risk_register.md` for the structured register. Headline risks:
-dataset access is credentialed (MIMIC-CXR, CheXpert) and cannot be
-auto-downloaded; the MARVEL checkpoint requires a HuggingFace download;
-RadGraph inference requires PhysioNet-credentialed model weights in some
-distributions; the generator stage depends on a separate, pinned-commit
-LLaVA fork; two mutually-incompatible Python environments are required
-(retriever vs. generator).
+MIMIC-CXR is de-identified, credentialed data; the authors completed a
+training course and signed a data use agreement; MIMIC-CXR's usage policy
+prohibits sharing access with third parties. This directly reinforces
+`docs/data_requirements.md`'s constraint that this project must never
+attempt automated or shared access to MIMIC-CXR.
 
 ---
 
 ## Source Labels Used
 
-- `PAPER_EXPLICIT` — directly stated in the paper text (none yet, pending PDF)
+- `PAPER_EXPLICIT` — directly stated in the paper text (now populated —
+  paper is available)
 - `OFFICIAL_REPOSITORY` — verified by reading the cloned official code/README
-- `REASONABLE_INFERENCE` — inferred from code/README with explicit reasoning
+- `REASONABLE_INFERENCE` — inferred with explicit reasoning, not directly stated by either source
 - `PROPOSED_EXTENSION` — not in paper or official code; our own addition
-- `UNKNOWN` — genuinely unknown pending more source material
+- `UNKNOWN` — genuinely unknown even with both sources now available

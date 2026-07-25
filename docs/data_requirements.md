@@ -4,8 +4,16 @@
 
 | Dataset | Access | License/DUA | Source (OFFICIAL_REPOSITORY) |
 |---|---|---|---|
-| MIMIC-CXR | Credentialed (PhysioNet), requires completing CITI training and signing a data use agreement | PhysioNet Credentialed Health Data License | Linked via `vilmedic.app/papers/acl2023/` preprocessed split in README |
+| MIMIC-CXR | Credentialed (PhysioNet), requires completing CITI training and signing a data use agreement | PhysioNet Credentialed Health Data License | Linked via `vilmedic.app/papers/acl2023/` preprocessed split in README; paper Section 8 confirms authors completed training + signed DUA, and that sharing access with third parties is prohibited |
 | CheXpert | Credentialed registration | Stanford AIMI dataset license | Linked via `stanfordaimi.azurewebsites.net` in README |
+
+**Confirmed by the paper** (`PAPER_EXPLICIT`, Section 4 "Dataset"):
+MIMIC-CXR provides **125,417 training / 991 validation / 1,624 test**
+image-report pairs, sourced from Beth Israel Deaconess Medical Center.
+CheXpert is used **only** as a **1,000-pair zero-shot test set** (the
+"hidden test set" from MIMIC-CXR-RRS, with images separately downloaded
+from Stanford AIMI) — never for training. This confirms and replaces the
+prior `REASONABLE_INFERENCE` that CheXpert was evaluation-only.
 | MARVEL retriever checkpoint | Public HuggingFace repo (`OpenMatch/marvel-ance-clueweb`) | Check HF repo's own license before use | README |
 | LLaVA base model / fork | Public GitHub (`haotian-liu/LLaVA`, pinned commit) | Apache-2.0 (LLaVA) — verify against pinned commit | `install_llava.sh` |
 
@@ -74,11 +82,11 @@ finding/impression text, fabricated but internally-consistent patient/study
 IDs) — never real patient data, and never data requiring the above
 credentials. Fixtures live under `tests/fixtures/`.
 
-## Open Questions (pending paper PDF)
+## Open Questions (remaining after reading the paper)
 
-- Exact split sizes and any additional inclusion/exclusion criteria the
-  paper applies beyond MIMIC-CXR's official split.
-- Whether CheXpert is used for training, evaluation only, or cross-dataset
-  generalization testing (the shipped repo only ships a CheXpert `test.json`
-  placeholder, suggesting evaluation-only, but this is `REASONABLE_INFERENCE`,
-  not confirmed).
+- Any additional inclusion/exclusion criteria beyond the vilmedic/RadSum23
+  processed MIMIC-CXR split's stated counts (125,417/991/1,624) — the paper
+  cites the split as-is from Delbrouck et al. 2023 rather than re-deriving it.
+- Whether the paper's authors independently re-verified patient/study
+  leakage in that inherited split, or trusted it as-given — not stated, so
+  this project verifies leakage itself regardless (see below).

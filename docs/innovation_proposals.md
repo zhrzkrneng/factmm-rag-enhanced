@@ -97,7 +97,12 @@ suitable data access.
 
 Baseline arms: no-retrieval, official top-1 retriever, reproduced
 FactMM-RAG, oracle-analysis (only if methodologically valid, i.e. not used
-to inflate reported numbers).
+to inflate reported numbers). The paper (now available) already defines and
+reports its own Oracle upper bound precisely (Appendix A.3: argmax over the
+corpus of `F1RadGraph + F1CheXbert` instance-wise score, self-excluded for
+training queries) — this project reuses that exact definition rather than
+inventing a different oracle procedure, so oracle numbers stay comparable
+to the paper's own Table 1 Oracle row (see `docs/paper_analysis.md` §17).
 
 Innovation ablations: adaptive-k only, reranking only, fusion only, gating
 only, uncertainty-module only, and cumulative combinations up to the full
