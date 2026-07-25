@@ -40,11 +40,12 @@ the Milestone 2.1 architecture explanation).
 - [x] Cell 05 — Import and Version Verification — **SUCCESS** (transformers 5.13.1 noted as a future-milestone risk, not a current blocker)
 - [x] Cell 06 — Configuration and Reproducibility Setup — **SUCCESS** (repo importable, SEED=42, configs readable)
 - [x] Cell 07 — Data Availability and Directory Validation — **SUCCESS** (no real data present yet, as expected; skeleton created)
-- [ ] Cell 08 — `ReportRecord` implementation + unit tests — code provided, awaiting execution
-- [ ] (subsequent cells implementing parsers, `IntegrityChecker`,
+- [x] Cell 08 — `ReportRecord` implementation + unit tests — **SUCCESS** (7/7 tests passed)
+- [ ] Cell 09 — `JsonReportParser` implementation + unit tests — code provided, awaiting execution
+- [ ] (subsequent cells implementing `IntegrityChecker`,
       `PatientSplitValidator`, `ManifestBuilder` — one class/cell at a
       time, not yet written)
 
 ## Next Step
 
-Run Cell 08 in Colab and report the output.
+Run Cell 09 in Colab and report the output.

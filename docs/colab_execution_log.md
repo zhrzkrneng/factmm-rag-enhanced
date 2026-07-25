@@ -165,3 +165,25 @@ run.
   (`data/mimic/`, `data/chexpert/`)
 - **Next step**: setup complete (Cells 01–07). Milestone 2.1
   implementation begins: `ReportRecord` in `src/data/schema.py`.
+
+---
+
+## Cell 08 — `ReportRecord` Import and Test
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–07
+- **Key outputs**:
+  - `git pull` fast-forwarded cleanly (`42335bf..86c4b1e`), bringing in
+    `src/data/schema.py`'s real implementation, `tests/conftest.py`,
+    `tests/unit/test_schema.py`
+  - `pytest tests/unit/test_schema.py -v`: **7/7 passed** in 0.03s
+    (Python 3.12.13, pytest 8.4.2) — matches the 7/7 pass result from
+    my own sandbox run (Python 3.11.15, pytest 9.1.1) before pushing
+  - Manual sanity construction confirmed `combined_text` and
+    `frontal_image_path` behave as documented
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: none new (transient `.pytest_cache/` only,
+  gitignored)
+- **Next step**: implement `JsonReportParser` in `src/data/parsing.py`

@@ -1,0 +1,9 @@
+[
+    {
+        "image": [
+            "CheXpert-v1.0/valid/patient64541/study1/view1_frontal.jpg"
+        ],
+        "finding": "Synthetic CheXpert finding text.",
+        "impression": "Synthetic CheXpert impression text."
+    }
+]
