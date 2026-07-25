@@ -187,3 +187,22 @@ run.
 - **Generated artifacts**: none new (transient `.pytest_cache/` only,
   gitignored)
 - **Next step**: implement `JsonReportParser` in `src/data/parsing.py`
+
+---
+
+## Cell 09 — `JsonReportParser` Import and Test
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–08
+- **Key outputs**:
+  - `git pull` fast-forwarded cleanly (`86c4b1e..a5c29ce`)
+  - `pytest tests/unit/ -v`: **12/12 passed** in 0.04s (Python 3.12.13,
+    pytest 8.4.2), matching the local sandbox result before pushing
+  - Manual parse of `sample_mimic.json` confirmed correct patient/study
+    ID extraction for both synthetic records
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: none new
+- **Next step**: implement `IntegrityChecker` (`src/data/integrity.py`)
+  and the exception types it needs (`src/common/exceptions.py`)
