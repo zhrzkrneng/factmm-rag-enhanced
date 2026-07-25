@@ -20,7 +20,7 @@ component, see `docs/reproduction_matrix.md`.
 
 | Milestone | Status |
 |---|---|
-| 2.1 — Data pipeline | IN PROGRESS |
+| 2.1 — Data pipeline | COMPLETE (unit + integration tested in Colab) |
 | 2.2 — RadGraph processing | NOT STARTED |
 | 2.3 — Fact-aware pair mining | NOT STARTED |
 | 2.4 — Retriever | NOT STARTED |
@@ -45,7 +45,13 @@ the Milestone 2.1 architecture explanation).
 - [x] Cell 10 — `IntegrityChecker` + exception types implementation + unit tests — **SUCCESS** (21/21 tests passed)
 - [x] Cell 11 — `PatientSplitValidator` implementation + unit tests — **SUCCESS** (28/28 tests passed)
 - [x] Cell 12 — `ManifestBuilder` + schema implementation + unit tests — **SUCCESS** (33/33 tests passed; demo manifest verified leak-free on Drive)
-- [ ] Cell 13 — end-to-end pipeline smoke test — in progress
+- [x] Cell 13 — end-to-end pipeline smoke test — **SUCCESS** (34/34 tests passed)
+
+**Milestone 2.1 (data pipeline): COMPLETE.** All 5 planned classes
+(`ReportRecord`, `JsonReportParser`, `IntegrityChecker`,
+`PatientSplitValidator`, `ManifestBuilder`) implemented, unit-tested,
+and verified end-to-end in the user's Colab environment. Awaiting
+approval to begin Milestone 2.2 (RadGraph processing).
 
 ## Implementation Deviations From the Original Phase 1 Sketch
 
@@ -67,4 +73,5 @@ actually implemented, not silent changes:
 
 ## Next Step
 
-Run Cell 13 in Colab and report the output.
+Milestone 2.1 complete. Awaiting approval to begin Milestone 2.2
+(RadGraph processing).

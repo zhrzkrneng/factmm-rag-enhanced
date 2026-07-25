@@ -1,8 +1,15 @@
 # Reproduction Matrix
 
 Status legend: `NOT_STARTED` / `PLANNED` / `IN_PROGRESS` / `IMPLEMENTED` /
-`TESTED` / `BLOCKED`. Nothing below is `IMPLEMENTED` yet — Phase 0 is
-documentation-only, no model code has been written.
+`TESTED` / `BLOCKED`. `TESTED` requires an actually-observed test run —
+in this project's case, both in the author's sandbox and independently
+confirmed in the user's own Colab environment — never just "the code
+looks right" (per CLAUDE.md's rule against claiming a component works
+without execution).
+
+**Milestone 2.1 (data pipeline) is now complete and `TESTED`** — see
+the first three rows below. Everything else remains `NOT_STARTED`;
+Milestone 2.2 (RadGraph processing) has not begun.
 
 Now that `paper/factmm_rag.pdf` has been read (see `docs/paper_analysis.md`
 for full detail), most rows below have a real "Paper description" and
@@ -12,9 +19,9 @@ rather than silently resolved (see the `top_k` and `τ` rows).
 
 | Component | Paper description | Official-code location | Required inputs | Expected outputs | Status | Confidence | Open questions |
 |---|---|---|---|---|---|---|---|
-| Data parsing | Concatenate finding+impression as report text; select frontal view per study (§3.2 impl. details) | `data/parse.py` | Per-line `.tok` image-path / finding / impression files | `{image, finding, impression}` JSON records | NOT_STARTED | High | None — matches code |
-| Frontal-view selection | Explicitly stated: "we select the frontal view" | Implicit: `data.py` always uses `image[0]` | Multi-image study records | Single primary image per study | NOT_STARTED | High (resolved by paper) | None |
-| Patient/study split | Uses MIMIC-CXR's standard processed split (125,417/991/1,624 per Delbrouck et al. 2023) | Not explicit in code; split inherited externally | Dataset with patient/study identifiers | Patient-disjoint train/valid/test manifests | NOT_STARTED | Medium | Paper doesn't independently verify no leakage in that external split — this project still audits it directly |
+| Data parsing | Concatenate finding+impression as report text; select frontal view per study (§3.2 impl. details) | `data/parse.py` | Per-line `.tok` image-path / finding / impression files | `{image, finding, impression}` JSON records | **TESTED** — `ReportRecord` (src/data/schema.py), `JsonReportParser` (src/data/parsing.py); 34/34 tests pass, confirmed in author sandbox + user's Colab | High | Deviation: one `JsonReportParser` class (parameterized by dataset), not separate `MimicCxrParser`/`CheXpertParser` — see docs/progress.md |
+| Frontal-view selection | Explicitly stated: "we select the frontal view" | Implicit: `data.py` always uses `image[0]` | Multi-image study records | Single primary image per study | **TESTED** — `ReportRecord.frontal_image_path` (image[0] convention); unit-tested | High (resolved by paper) | Metadata-based (non-convention) frontal selection not yet implemented — still an open TODO for when real MIMIC-CXR metadata is available |
+| Patient/study split | Uses MIMIC-CXR's standard processed split (125,417/991/1,624 per Delbrouck et al. 2023) | Not explicit in code; split inherited externally | Dataset with patient/study identifiers | Patient-disjoint train/valid/test manifests | **TESTED** — `IntegrityChecker` + `PatientSplitValidator` (src/data/integrity.py, src/data/splits.py) + `ManifestBuilder` (src/data/manifest.py); unit + end-to-end integration tests pass | Medium | Only tested against synthetic fixtures so far — real MIMIC-CXR/CheXpert data not yet available (see docs/data_requirements.md) |
 | RadGraph annotation | RadGraph extracts entities+relations (no version specified) | `data/label.py`, pinned `radgraph==0.0.9` | Report `finding` text | Entities/relations JSON | NOT_STARTED | Medium | Exact model version behind paper's numbers vs. package `0.0.9` |
 | CheXbert labeling | 5-class subset used for both mining and evaluation (Cardiomegaly, Edema, Consolidation, Atelectasis, Pleural Effusion) | `data/label.py` | Report `finding` text | 14-class labels, 5-class subset kept | NOT_STARTED | High | None |
 | Factual similarity scoring | Eq.1: RadGraph-based F1-style overlap `s(q,d)=2|q̂∩d̂|/(len(q̂)+len(d̂))`, restricted first to same-label candidates | `gen_similarity.py` | Labeled reports | All-pairs CheXbert + RadGraph similarity matrices | NOT_STARTED | High | Compute cost at 125,417² scale needs a small-scale substitute for the MVP |

@@ -275,3 +275,29 @@ run.
   chaining all of them together (per the project's per-milestone
   workflow step "run a smoke test", not yet done — each class has only
   been tested in isolation so far).
+
+---
+
+## Cell 13 — End-to-End Pipeline Smoke Test
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–12
+- **Key outputs**:
+  - `git pull` fast-forwarded cleanly (`bc1aaab..9324d9d`)
+  - `pytest tests/ -v`: **34/34 passed** in 0.08s (Python 3.12.13,
+    pytest 8.4.2) — 33 unit tests plus
+    `test_pipeline_smoke.py::test_full_pipeline_end_to_end`, which
+    chains `JsonReportParser` (both datasets) → `IntegrityChecker` →
+    `PatientSplitValidator` → `ManifestBuilder` (build/save/reload, 3
+    splits) in one test
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: none persisted (test uses pytest's
+  auto-cleaned `tmp_path`)
+- **Milestone status**: **Milestone 2.1 (data pipeline) complete** —
+  all 5 planned classes implemented, unit-tested, and now verified
+  end-to-end, in the user's actual Colab environment, not just the
+  author's sandbox. Next milestone (2.2, RadGraph processing) awaits
+  explicit approval before starting, per the project's
+  per-milestone-approval workflow.
