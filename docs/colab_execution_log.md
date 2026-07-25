@@ -45,3 +45,28 @@ run.
 - **Generated artifacts**: three empty directories on Google Drive
   (`FactMM-RAG-Enhanced/`, `.../data/`, `.../data/manifests/`) — no files
 - **Next step**: Cell 03 — Repository Cloning
+
+---
+
+## Cell 03 — Repository Cloning
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–02
+- **Key outputs**:
+  - Repository is **public** — anonymous HTTPS clone succeeded on the
+    first attempt, no Personal Access Token needed
+  - Cloned to `/content/factmm-rag-enhanced`
+  - Branch confirmed: `claude/factmm-rag-repo-setup-o04jx3`
+  - Top-level content sanity check passed (`src`, `configs`, `docs`,
+    `README.md`, `CLAUDE.md`, `requirements.txt` all present)
+- **Errors encountered**: none. Cosmetic-only: the cell's last line was
+  a bare `run(...)` call whose return value (a `CompletedProcess`) got
+  auto-echoed by Colab's notebook display, printing a redundant
+  `CompletedProcess(args=..., returncode=0, ...)` block after the
+  intended output. Not a functional error.
+- **Fix applied**: none required this run; future cells will avoid
+  ending on an unassigned function call that returns a printable object.
+- **Generated artifacts**: full repository checkout at
+  `/content/factmm-rag-enhanced` (ephemeral, local disk)
+- **Next step**: Cell 04 — Dependency Installation

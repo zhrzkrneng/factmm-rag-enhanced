@@ -35,8 +35,8 @@ the Milestone 2.1 architecture explanation).
 
 - [x] Cell 01 — Environment Inspection — **SUCCESS**
 - [x] Cell 02 — Mount Google Drive — **SUCCESS**
-- [ ] Cell 03 — Repository Cloning — code provided, awaiting execution
-- [ ] Cell 04 — Dependency Installation
+- [x] Cell 03 — Repository Cloning — **SUCCESS** (public repo, no PAT needed)
+- [ ] Cell 04 — Dependency Installation — code provided, awaiting execution
 - [ ] Cell 05 — Import and Version Verification
 - [ ] Cell 06 — Configuration and Reproducibility Setup
 - [ ] Cell 07 — Data Availability and Directory Validation
@@ -46,4 +46,4 @@ the Milestone 2.1 architecture explanation).
 
 ## Next Step
 
-Run Cell 03 in Colab and report the output.
+Run Cell 04 in Colab and report the output.
