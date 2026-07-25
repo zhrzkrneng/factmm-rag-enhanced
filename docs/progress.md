@@ -38,12 +38,12 @@ the Milestone 2.1 architecture explanation).
 - [x] Cell 03 — Repository Cloning — **SUCCESS** (public repo, no PAT needed)
 - [x] Cell 04 — Dependency Installation — **SUCCESS** (faiss-cpu newly installed; rest already satisfied)
 - [x] Cell 05 — Import and Version Verification — **SUCCESS** (transformers 5.13.1 noted as a future-milestone risk, not a current blocker)
-- [ ] Cell 06 — Configuration and Reproducibility Setup — code provided, awaiting execution
-- [ ] Cell 07 — Data Availability and Directory Validation
+- [x] Cell 06 — Configuration and Reproducibility Setup — **SUCCESS** (repo importable, SEED=42, configs readable)
+- [ ] Cell 07 — Data Availability and Directory Validation — code provided, awaiting execution
 - [ ] (subsequent cells implementing `ReportRecord`, parsers,
       `IntegrityChecker`, `PatientSplitValidator`, `ManifestBuilder` —
       one class/cell at a time, not yet written)
 
 ## Next Step
 
-Run Cell 06 in Colab and report the output.
+Run Cell 07 in Colab and report the output.

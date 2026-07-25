@@ -123,3 +123,23 @@ run.
   older-pinned environment rather than reusing this one as-is.
 - **Generated artifacts**: none (verification only)
 - **Next step**: Cell 06 — Configuration and Reproducibility Setup
+
+---
+
+## Cell 06 — Configuration and Reproducibility Setup
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–05
+- **Key outputs**:
+  - `LOCAL_ROOT` added to `sys.path`; `import src` succeeded, resolving
+    to `/content/factmm-rag-enhanced/src/__init__.py`
+  - `random`/`numpy`/`torch` seeded with `SEED=42`
+  - All four `configs/*/default.yaml` files confirmed present and
+    readable, each parsing to `None` (comment-only placeholders, as
+    expected — no real hyperparameters exist yet)
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Generated artifacts**: none (process-local state only: `sys.path`,
+  RNG seeds — not persisted, must be redone every fresh runtime)
+- **Next step**: Cell 07 — Data Availability and Directory Validation
