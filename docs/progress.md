@@ -37,8 +37,8 @@ the Milestone 2.1 architecture explanation).
 - [x] Cell 02 — Mount Google Drive — **SUCCESS**
 - [x] Cell 03 — Repository Cloning — **SUCCESS** (public repo, no PAT needed)
 - [x] Cell 04 — Dependency Installation — **SUCCESS** (faiss-cpu newly installed; rest already satisfied)
-- [ ] Cell 05 — Import and Version Verification — code provided, awaiting execution
-- [ ] Cell 06 — Configuration and Reproducibility Setup
+- [x] Cell 05 — Import and Version Verification — **SUCCESS** (transformers 5.13.1 noted as a future-milestone risk, not a current blocker)
+- [ ] Cell 06 — Configuration and Reproducibility Setup — code provided, awaiting execution
 - [ ] Cell 07 — Data Availability and Directory Validation
 - [ ] (subsequent cells implementing `ReportRecord`, parsers,
       `IntegrityChecker`, `PatientSplitValidator`, `ManifestBuilder` —
@@ -46,4 +46,4 @@ the Milestone 2.1 architecture explanation).
 
 ## Next Step
 
-Run Cell 05 in Colab and report the output.
+Run Cell 06 in Colab and report the output.

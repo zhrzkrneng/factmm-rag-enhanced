@@ -95,3 +95,31 @@ run.
 - **Generated artifacts**: installed Python packages in the runtime's
   site-packages (ephemeral, not on Drive)
 - **Next step**: Cell 05 — Import and Version Verification
+
+---
+
+## Cell 05 — Import and Version Verification
+
+- **Status**: SUCCESS
+- **Execution date**: 2026-07-25
+- **Runtime**: same CPU-only runtime as Cells 01–04
+- **Key outputs** (confirmed runtime versions):
+  - `torch 2.11.0+cpu`, `torchvision 0.26.0+cpu`, `transformers 5.13.1`,
+    `datasets 4.0.0`, `pandas 2.2.2`, `numpy 2.0.2`,
+    `scikit-learn 1.6.1`, `faiss-cpu 1.14.3`, `pyyaml 6.0.3`,
+    `tqdm 4.67.3`, `pytest 8.4.2`
+  - `torch.cuda.is_available() == False` (consistent with Cell 01)
+  - `faiss.IndexFlatIP` smoke test passed (self-search returned correct
+    index, no ABI/binary issues)
+  - `pandas`/`numpy` interop smoke test passed
+- **Errors encountered**: none
+- **Fix applied**: n/a
+- **Deviation flagged (not an error)**: `transformers 5.13.1` is far
+  newer than the versions referenced anywhere in
+  `docs/compute_requirements.md` (official retriever stage:
+  `transformers==4.23.1`; LLaVA generator stage: `transformers==4.36.2`).
+  Not a problem for Milestone 2.1 (data pipeline doesn't use
+  `transformers`), but Milestones 2.4/2.5 will need a separate,
+  older-pinned environment rather than reusing this one as-is.
+- **Generated artifacts**: none (verification only)
+- **Next step**: Cell 06 — Configuration and Reproducibility Setup
