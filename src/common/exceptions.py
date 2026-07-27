@@ -33,3 +33,14 @@ class ConfigValidationError(Exception):
     Covers missing required fields and values outside an expected
     range/type.
     """
+
+
+class CompatibilityError(Exception):
+    """Raised when a third-party dependency's installed version doesn't
+    match what a compatibility shim layer has been validated against.
+
+    Used by src.baseline.radgraph.compat to fail loudly rather than
+    silently apply patches to an unvalidated package version, which
+    could reintroduce a bug that version already fixed, or mask a
+    different real problem.
+    """
