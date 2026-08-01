@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.pytest_cache/
 
 # Virtual environments
 .venv/
@@ -28,9 +29,10 @@ ENV/
 secrets/
 credentials/
 
-# Datasets
-data/
-datasets/
+# Datasets (root-level only — must not shadow reference/original_repository's
+# vendored source code, which happens to contain directories named "data")
+/data/
+/datasets/
 *.csv
 *.tsv
 *.json.gz

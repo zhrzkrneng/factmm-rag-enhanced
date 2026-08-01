@@ -1,0 +1,6 @@
+# Responsibility: innovation module settings — adaptive-k bounds,
+# reranking weights, fusion options, confidence-gating thresholds, and
+# uncertainty-detector settings — consumed by src/innovation. No values
+# populated yet — this is a structural placeholder only, per Phase 1 (no
+# implementation yet, and no innovation code runs before the baseline
+# smoke test passes).

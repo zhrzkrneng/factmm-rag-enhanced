@@ -1,0 +1,17 @@
+[
+    {
+        "image": [
+            "files/p10/p10000032/s50414267/view1_frontal.jpg",
+            "files/p10/p10000032/s50414267/view2_lateral.jpg"
+        ],
+        "finding": "Synthetic finding text for record one.",
+        "impression": "Synthetic impression text for record one."
+    },
+    {
+        "image": [
+            "files/p11/p11000045/s55123456/view1_frontal.jpg"
+        ],
+        "finding": "Synthetic finding text for record two.",
+        "impression": "Synthetic impression text for record two."
+    }
+]
