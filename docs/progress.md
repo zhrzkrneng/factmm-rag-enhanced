@@ -21,7 +21,7 @@ component, see `docs/reproduction_matrix.md`.
 | Milestone | Status |
 |---|---|
 | 2.1 — Data pipeline | COMPLETE (unit + integration tested in Colab) |
-| 2.2 — RadGraph processing | COMPATIBILITY LAYER COMPLETE AND TESTED (Cell 14 rerun + Cell 15); `annotator.py` implementation not started |
+| 2.2 — RadGraph processing | COMPLETE (compatibility layer + `annotator.py` implementation, merged into `main`, verified end-to-end via real Cell 16 smoke test) |
 | 2.3 — Fact-aware pair mining | NOT STARTED |
 | 2.4 — Retriever | NOT STARTED |
 | 2.5 — Retrieval-augmented generator | NOT STARTED |
@@ -71,15 +71,19 @@ actually implemented, not silent changes:
    `PatientSplitValidator` already accepts) covers that need — so only
    `SplitManifest` (matching the actual per-split output file) exists.
 
-## Milestone 2.2 — Environment Audit (Cell 14) and Compatibility Layer (Cell 15)
+## Milestone 2.2 — Environment Audit (Cell 14), Compatibility Layer (Cell 15), Annotation Pipeline (Cell 16)
 
-**Status: the compatibility layer is complete and validated —
-`src/baseline/radgraph/compat.py` exists, is unit-tested (29/29), and
-has been verified against the real Colab environment via an
-independent Cell 14 rerun. This refers only to the compatibility
-layer, not Milestone 2.2 as a whole: the RadGraph annotation pipeline
-itself (`src/baseline/radgraph/annotator.py` and downstream annotation
-logic) remains unimplemented, so Milestone 2.2 is NOT complete.**
+**Status: Milestone 2.2 is approved as complete.** The compatibility
+layer (`src/baseline/radgraph/compat.py`, 29/29 unit tests) and the
+RadGraph/CheXbert annotation pipeline (`src/baseline/radgraph/
+annotator.py`, part of a 90/90-passing suite) are both implemented,
+merged into `main` (PR #1), and independently verified end-to-end
+against the real Colab environment: the compatibility layer via the
+Cell 14 rerun, and the annotation pipeline itself via the real Cell 16
+smoke test (see `docs/colab_execution_log.md`). This is an
+execution-compatibility and pipeline-behavior verification — it is
+**not** a clinical-correctness claim; see the Cell 16 summary below and
+the scope reminders throughout this section.
 
 - Full detail: `docs/colab_execution_log.md`'s Cell 14, "Cell 14 —
   Rerun After Runtime Restart," and Cell 15 entries.
@@ -130,13 +134,32 @@ logic) remains unimplemented, so Milestone 2.2 is NOT complete.**
   it does not verify clinical or metric correctness. Neither smoke-test
   output (original or rerun) should be read as a correctness claim
   about either model.
+- **Cell 16 — real annotation-pipeline smoke test (`PASS`)**: run
+  against the real `RadGraphAnnotator` merged into `main` (PR #1, merge
+  commit `2910a979...`). `RadGraphAnnotator()` constructed real
+  `RadGraph()` and `F1CheXbert()` models via the compatibility layer.
+  Three synthetic (non-PHI) `ReportRecord`s were successfully annotated
+  by `annotate_records()`. Output JSONL schema, stable
+  `(dataset, patient_id, study_id)` identifiers, the 14-class
+  `chexbert_labels_14` vector, the `chexbert_labels_5` subset, the
+  sidecar run metadata (`run_status`, `summary`), and resume behavior
+  (re-running the same records skipped all 3 with 0 reprocessed, 0
+  duplicate output lines) were all validated. Both checkpoints were
+  reused from the runtime's cache — the metadata recorded
+  `revision_source: "preexisting_file"` for each, confirming no
+  re-download occurred. Full detail: `docs/colab_execution_log.md`,
+  "Cell 16 — Real Annotation Pipeline Smoke Test."
+- **What this does and does not establish**: Cell 16 verifies execution
+  compatibility and pipeline behavior only, not clinical correctness —
+  the same scope boundary as Cell 14. The F1CheXbert determinism
+  question (`docs/risk_register.md` row 15, an open, unconfirmed-root-
+  cause risk from the Cell 14 rerun) remains open; Cell 16 did not
+  investigate it and its resolution is not required for Milestone 2.2.
 
 ## Next Step
 
-The compatibility layer (Cells 14 + 15) is complete and end-to-end
-tested. **This is not the same as Milestone 2.2 being complete** — the
-annotation pipeline itself has not been started. Awaiting explicit
-approval before any commit/push, and before starting
-`src/baseline/radgraph/annotator.py` (the actual annotation-pipeline
-implementation built on top of `compat.py`), which is what would
-actually complete Milestone 2.2.
+Milestone 2.2 (RadGraph processing) is complete: the compatibility
+layer, the annotation pipeline implementation, and a real end-to-end
+Colab smoke test (Cell 16) are all done. Next milestone is 2.3
+(fact-aware pair mining), which awaits explicit approval before
+starting, per the project's per-milestone-approval workflow.

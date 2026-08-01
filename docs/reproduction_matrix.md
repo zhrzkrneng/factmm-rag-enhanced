@@ -8,28 +8,25 @@ looks right" (per CLAUDE.md's rule against claiming a component works
 without execution).
 
 **Milestone 2.1 (data pipeline) is now complete and `TESTED`** — see
-the first three rows below. Milestone 2.2 (RadGraph processing)
-**annotation-pipeline implementation** (`src/baseline/radgraph/
-annotator.py`) has **not** begun — the "RadGraph annotation" and
-"CheXbert labeling" rows below remain `NOT_STARTED` for that actual
-project code. What *has* happened, and is now complete and tested, is
-the **compatibility layer** underneath it: a full environment/
-dependency audit (Cell 14, see `docs/colab_execution_log.md`)
-confirming both `radgraph==0.0.9` and `f1chexbert==0.0.2` construct and
-run correctly on this project's actual Colab environment, after 6
-compatibility shims and 2 cache-path fixes for incompatibilities
-between radgraph's ~2022-era code and the modern package ecosystem;
-those 6 shims have since been moved into version-controlled,
-unit-tested code (`src/baseline/radgraph/compat.py`, 29/29 tests
-passing) and independently re-verified end-to-end via a second,
-self-contained Cell 14 rerun (real `RadGraph()`/`F1CheXbert()`
-construction and inference against the actual checkpoints, in a fresh
-Colab runtime). This substantially de-risks implementation but is not
-itself the annotation-pipeline implementation. One open item surfaced
-by the rerun: F1CheXbert produced a different single-class label for
-the identical smoke-test input across the two runs — logged in
-`docs/risk_register.md` #15, to be resolved before Milestone 2.6, not
-blocking Milestone 2.2.
+the first three rows below. **Milestone 2.2 (RadGraph processing) is
+now also complete and `TESTED`**: the compatibility layer
+(`src/baseline/radgraph/compat.py`, 29/29 unit tests) and the
+annotation-pipeline implementation (`src/baseline/radgraph/
+annotator.py`, part of a 90/90-passing suite) are both merged into
+`main` (PR #1) and independently verified end-to-end in the user's
+actual Colab environment — the compatibility layer via a Cell 14 rerun
+(real `RadGraph()`/`F1CheXbert()` construction and inference against
+the actual checkpoints), and the annotation pipeline itself via a real
+Cell 16 smoke test (`RadGraphAnnotator.annotate_records()` run against
+3 synthetic records, output schema/identifiers/metadata/resume
+behavior all validated; see `docs/colab_execution_log.md`). This is an
+execution-compatibility and pipeline-behavior verification only, not a
+clinical-correctness claim — no conclusion about annotation quality on
+real data should be drawn from it. One open item surfaced by the Cell
+14 rerun and not investigated by Cell 16: F1CheXbert produced a
+different single-class label for the identical smoke-test input across
+two runs — logged in `docs/risk_register.md` #15, to be resolved before
+Milestone 2.6, not blocking Milestone 2.2.
 
 Now that `paper/factmm_rag.pdf` has been read (see `docs/paper_analysis.md`
 for full detail), most rows below have a real "Paper description" and
@@ -42,8 +39,8 @@ rather than silently resolved (see the `top_k` and `τ` rows).
 | Data parsing | Concatenate finding+impression as report text; select frontal view per study (§3.2 impl. details) | `data/parse.py` | Per-line `.tok` image-path / finding / impression files | `{image, finding, impression}` JSON records | **TESTED** — `ReportRecord` (src/data/schema.py), `JsonReportParser` (src/data/parsing.py); 34/34 tests pass, confirmed in author sandbox + user's Colab | High | Deviation: one `JsonReportParser` class (parameterized by dataset), not separate `MimicCxrParser`/`CheXpertParser` — see docs/progress.md |
 | Frontal-view selection | Explicitly stated: "we select the frontal view" | Implicit: `data.py` always uses `image[0]` | Multi-image study records | Single primary image per study | **TESTED** — `ReportRecord.frontal_image_path` (image[0] convention); unit-tested | High (resolved by paper) | Metadata-based (non-convention) frontal selection not yet implemented — still an open TODO for when real MIMIC-CXR metadata is available |
 | Patient/study split | Uses MIMIC-CXR's standard processed split (125,417/991/1,624 per Delbrouck et al. 2023) | Not explicit in code; split inherited externally | Dataset with patient/study identifiers | Patient-disjoint train/valid/test manifests | **TESTED** — `IntegrityChecker` + `PatientSplitValidator` (src/data/integrity.py, src/data/splits.py) + `ManifestBuilder` (src/data/manifest.py); unit + end-to-end integration tests pass | Medium | Only tested against synthetic fixtures so far — real MIMIC-CXR/CheXpert data not yet available (see docs/data_requirements.md) |
-| RadGraph annotation | RadGraph extracts entities+relations (no version specified) | `data/label.py`, pinned `radgraph==0.0.9` | Report `finding` text | Entities/relations JSON | NOT_STARTED (compatibility layer COMPLETE AND TESTED — `src/baseline/radgraph/compat.py`, 29/29 unit tests, verified end-to-end via Cell 14 rerun; `annotator.py` itself not started) | Medium | Exact model version behind paper's numbers vs. package `0.0.9`; env audit found `transformers` must be `4.57.6` not `4.23.1` (Python 3.12 wheel constraint, see `docs/risk_register.md` #8c) and requires 6 compatibility shims (see #8b, now Mitigated) — moved into version-controlled code |
-| CheXbert labeling | 5-class subset used for both mining and evaluation (Cardiomegaly, Edema, Consolidation, Atelectasis, Pleural Effusion) | `data/label.py` | Report `finding` text | 14-class labels, 5-class subset kept | NOT_STARTED (compatibility layer COMPLETE AND TESTED — see above; `annotator.py` itself not started) | High | Checkpoint (`chexbert.pth`, 1.25GB) confirmed publicly downloadable, no auth needed; same cache-path bug as RadGraph found and fixed (`docs/risk_register.md` #8b); F1CheXbert output showed a run-to-run discrepancy on identical input — see `docs/risk_register.md` #15, must be resolved before Milestone 2.6 |
+| RadGraph annotation | RadGraph extracts entities+relations (no version specified) | `data/label.py`, pinned `radgraph==0.0.9` | Report `finding` text | Entities/relations JSON | **TESTED** — `RadGraphAnnotator` (`src/baseline/radgraph/annotator.py`) merged into `main`; compatibility layer (`src/baseline/radgraph/compat.py`, 29/29 unit tests) verified via Cell 14 rerun, annotation pipeline itself verified via real Cell 16 smoke test (3 synthetic records annotated end-to-end, real entities/relations schema validated) — execution-compatibility only, not a clinical-correctness claim | Medium | Exact model version behind paper's numbers vs. package `0.0.9`; env audit found `transformers` must be `4.57.6` not `4.23.1` (Python 3.12 wheel constraint, see `docs/risk_register.md` #8c) and requires 6 compatibility shims (see #8b, now Mitigated) — moved into version-controlled code |
+| CheXbert labeling | 5-class subset used for both mining and evaluation (Cardiomegaly, Edema, Consolidation, Atelectasis, Pleural Effusion) | `data/label.py` | Report `finding` text | 14-class labels, 5-class subset kept | **TESTED** — same `RadGraphAnnotator` implementation and Cell 16 smoke test as above; 14-class vector length and 5-class subset (`CHEXBERT_5_INDICES` extraction) both validated against real `F1CheXbert()` output — execution-compatibility only, not a clinical-correctness claim | High | Checkpoint (`chexbert.pth`, 1.25GB) confirmed publicly downloadable, no auth needed; same cache-path bug as RadGraph found and fixed (`docs/risk_register.md` #8b); F1CheXbert output showed a run-to-run discrepancy on identical input — see `docs/risk_register.md` #15, must be resolved before Milestone 2.6 |
 | Factual similarity scoring | Eq.1: RadGraph-based F1-style overlap `s(q,d)=2|q̂∩d̂|/(len(q̂)+len(d̂))`, restricted first to same-label candidates | `gen_similarity.py` | Labeled reports | All-pairs CheXbert + RadGraph similarity matrices | NOT_STARTED | High | Compute cost at 125,417² scale needs a small-scale substitute for the MVP |
 | Top-k positive mining | Paper: **top 2** pairs/query, threshold δ (Fig. 2 shows chex=1.0 best) | `gen_topk_pos.py` (shipped scripts use **top_k=3**) | Similarity matrices | Per-query positive candidate ID lists | NOT_STARTED | High, but **discrepancy**: paper says top-2, code default is top-3 — make `top_k` configurable and run both |
 | Retriever architecture | MARVEL (T5-ANCE text + ViT vision), two init checkpoints (WebQA/ClueWeb) compared | `src/retriever/DPR/multi_model.py` | CLIP ViT-B/32 + T5 (`t5-ance`/MARVEL) | Query/candidate embeddings | NOT_STARTED | High | MARVEL checkpoint availability/license on HuggingFace |

@@ -856,11 +856,99 @@ number to be trustworthy. Out of scope to resolve during Milestone 2.2.
   above (all now on this Colab runtime's local disk, not yet committed
   or pushed) and the transient `.pytest_cache/` directories from the two
   pytest runs.
-- **Next step**: the compatibility layer (Cells 14 + 15 together) is
-  complete and end-to-end tested. **This refers only to the
-  compatibility layer, not Milestone 2.2 as a whole** — the RadGraph
-  annotation pipeline itself (`src/baseline/radgraph/annotator.py` and
-  the downstream annotation logic that will use this layer) remains
-  unimplemented, so Milestone 2.2 is not complete. Awaiting explicit
-  approval before any commit/push, and before Cell 16 (whatever the
-  next implementation step is determined to be).
+- **Next step (superseded — see below)**: this originally said the
+  compatibility layer (Cells 14 + 15) was complete and tested but
+  Milestone 2.2 as a whole was not, pending an annotation-pipeline
+  implementation and its own smoke test. `src/baseline/radgraph/
+  annotator.py` has since been implemented, unit-tested (90/90,
+  including the 29 compatibility-layer tests), committed, merged into
+  `main` via PR #1, and independently smoke-tested end-to-end in Colab
+  against the real merged implementation — see "Cell 16 — Real
+  Annotation Pipeline Smoke Test" below.
+
+---
+
+## Cell 16 — Real Annotation Pipeline Smoke Test
+
+- **Status**: SUCCESS (`CELL 16: PASS`)
+- **Execution date**: 2026-08-01
+- **Scope**: execution-compatibility smoke test only, against the real
+  `RadGraphAnnotator` merged into `main` (PR #1, merge commit
+  `2910a9791b579bb9388e44570c65a1f277ffda92`). No `src/` files were
+  written by this cell. No pair mining, no retriever/generator code, no
+  unrelated modules. This does **not** verify clinical or metric
+  correctness — same scope boundary as Cell 14.
+- **Cell content**: 8 steps — (1) safely pull `main` and verify
+  `2910a979...` (PR #1's merge commit) is an ancestor of `HEAD`, and
+  that all 4 expected implementation/test files are present; (2) verify
+  pinned `radgraph==0.0.9`, `f1chexbert==0.0.2`, `transformers==4.57.6`;
+  (3) purge stale in-kernel module state for
+  `transformers`/`overrides_`/`radgraph`/`f1chexbert`/`huggingface_hub`/`src`
+  before importing anything; (4) import
+  `src.baseline.radgraph.annotator` and construct a real
+  `RadGraphAnnotator()` (internally runs `compat.patch_all(...)` +
+  `compat.preplace_all_checkpoints()`, then constructs real
+  `RadGraph()`/`F1CheXbert()`); (5) create 3 synthetic (non-PHI)
+  `ReportRecord`s; (6) run `annotate_records()` against them (fail-fast,
+  `continue_on_error=False`); (7) validate the output; (8) re-run
+  `annotate_records()` on the same records/output path to check resume
+  behavior.
+- **Result**:
+  - `RadGraphAnnotator()` constructed successfully against the real
+    merged implementation — shims applied, checkpoints prepared, real
+    `RadGraph()`/`F1CheXbert()` models loaded.
+  - 3 synthetic records
+    (`("smoke-test","smoke-p1","smoke-s1")`,
+    `("smoke-test","smoke-p2","smoke-s2")`,
+    `("smoke-test","smoke-p3","smoke-s3")`) were successfully annotated
+    by `annotate_records()` in one first pass: `processed=3`,
+    `skipped_already_done=0`, `failed=0`.
+  - Output JSONL: exactly 3 lines, one per input record; every line
+    contains all `REQUIRED_SUCCESS_FIELDS`
+    (`dataset`, `patient_id`, `study_id`, `finding`, `entities`,
+    `chexbert_labels_14`, `chexbert_labels_5`); all 3 expected
+    `(dataset, patient_id, study_id)` keys present with no unexpected
+    ones (stable identifiers confirmed).
+  - Raw RadGraph `entities` schema validated: each entity dict carries
+    `tokens`/`label`/`relations`, with `relations` a list, for every
+    entity in every record.
+  - `chexbert_labels_14` validated as length-14 for every record;
+    `chexbert_labels_5` validated as exactly matching the
+    `CHEXBERT_5_INDICES` extraction from `chexbert_labels_14` for every
+    record.
+  - Sidecar metadata (`annotations.jsonl.meta.json`) validated:
+    `run_status == "completed"`, `run_finished_at_utc` populated,
+    `summary == {"processed": 3, "skipped_already_done": 0, "failed":
+    0}` matching the first-pass run.
+  - **Checkpoints reused from cache, not re-downloaded**: the metadata's
+    `checkpoints` field recorded `revision_source: "preexisting_file"`
+    for both the RadGraph and CheXbert checkpoints — confirming
+    `compat.preplace_all_checkpoints()` found both checkpoints already
+    present in this Colab runtime's cache (from earlier Cell 14 runs in
+    the same session) rather than downloading them fresh.
+  - **Resume behavior validated**: re-running `annotate_records()` on
+    the identical 3 records against the same `output_path` produced
+    `processed=0`, `skipped_already_done=3`, `failed=0`, and the output
+    file's line count stayed at 3 (no duplicate lines written) —
+    confirming the composite `(dataset, patient_id, study_id)` resume
+    key correctly recognized all 3 records as already completed and did
+    not reprocess or duplicate them.
+- **Scope reminder**: this cell verifies execution compatibility and
+  pipeline behavior only — it does not verify clinical or metric
+  correctness. No conclusion about RadGraph/CheXbert annotation quality
+  should be drawn from this synthetic smoke test. The F1CheXbert
+  determinism question tracked in `docs/risk_register.md` row 15 remains
+  open and unrelated to this result (this cell did not investigate it).
+- **Generated artifacts**: none persisted to the repository or to
+  Drive — output written to a Colab-local temp directory
+  (`tempfile.mkdtemp(prefix="cell16_annotation_smoke_test_")`, outside
+  the repo checkout, not committed).
+- **Milestone status**: **Milestone 2.2 (RadGraph processing) is now
+  approved as complete** — the compatibility layer (Cells 14/15) and the
+  annotation pipeline implementation (`src/baseline/radgraph/
+  annotator.py`, merged into `main` via PR #1) have both been
+  independently verified by real execution in the user's Colab
+  environment. This is an execution-compatibility and pipeline-behavior
+  verification, not a clinical-correctness claim. Next milestone (2.3,
+  fact-aware pair mining) awaits explicit approval before starting, per
+  the project's per-milestone-approval workflow.
