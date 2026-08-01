@@ -44,3 +44,13 @@ class CompatibilityError(Exception):
     could reintroduce a bug that version already fixed, or mask a
     different real problem.
     """
+
+
+class AnnotationError(Exception):
+    """Raised when a single record fails RadGraph/CheXbert annotation for
+    a reason internal to this project's own schema checks (empty input
+    text, a malformed CheXbert output vector, corrupt or duplicate
+    existing output) -- as opposed to whatever exception type
+    radgraph/f1chexbert themselves happen to raise on a real inference
+    failure, which propagates as-is rather than being wrapped here.
+    """

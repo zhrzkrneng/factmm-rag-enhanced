@@ -44,11 +44,14 @@ Design principles:
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import sys
 from dataclasses import dataclass
 from importlib import metadata
-from typing import Callable, Dict, List, Optional
+from pathlib import Path
+from typing import Callable, Dict, List, Optional, Tuple
 
 from src.common.exceptions import CompatibilityError
 
@@ -591,3 +594,145 @@ def patch_all(*, allow_experimental_dataset_field: bool = False) -> List[str]:
         allow_experimental_dataset_field=allow_experimental_dataset_field
     )
     return applied
+
+
+# --- Checkpoint cache preparation (NOT a compatibility shim) -------------
+#
+# radgraph.utils.download_model() and f1chexbert's identical pattern both
+# call hf_hub_download(..., force_filename=f), which modern
+# huggingface_hub no longer honors -- it always uses its nested cache
+# layout instead of placing the file at the flat path RadGraph.__init__/
+# F1CheXbert.__init__ expect. This section works around that by placing
+# the file ourselves. It does not patch any Python API, so it is
+# deliberately not named or counted among the 6 patch_* shims above --
+# it changes where a file lives on disk, not code behavior. See
+# docs/colab_execution_log.md Cell 14 Sec.4 for the full root cause.
+
+CHECKPOINT_REPO_ID = "StanfordAIMI/RRG_scorers"
+
+_SNAPSHOT_REVISION_PATTERN = re.compile(r"snapshots[/\\]([^/\\]+)[/\\]")
+
+
+@dataclass(frozen=True)
+class CheckpointSpec:
+    """Where one checkpoint file should end up, before any download."""
+
+    filename: str
+    cache_dir: str  # may contain "~"; expanded/resolved at call time, not here
+
+    @property
+    def destination_path(self) -> Path:
+        return Path(self.cache_dir).expanduser() / self.filename
+
+
+RADGRAPH_CHECKPOINT = CheckpointSpec("radgraph.tar.gz", "~/.cache/radgraph")
+CHEXBERT_CHECKPOINT = CheckpointSpec("chexbert.pth", "~/.cache/chexbert")
+
+
+@dataclass(frozen=True)
+class CheckpointPlacementResult:
+    """What actually happened when placing one checkpoint file."""
+
+    filename: str
+    destination_path: str
+    newly_placed: bool
+    resolved_revision: Optional[str]  # real hash, or None -- never the string "unresolved"
+    revision_source: str  # "download_path" | "preexisting_file" | "unavailable"
+
+
+def _default_hf_hub_download(**kwargs):
+    import huggingface_hub
+
+    return huggingface_hub.hf_hub_download(**kwargs)
+
+
+def _extract_revision(resolved_path: str) -> Tuple[Optional[str], str]:
+    """Parse the huggingface_hub snapshot hash out of a resolved download
+    path (e.g. ``.../snapshots/<hash>/radgraph.tar.gz``). Returns
+    ``(None, "unavailable")`` if the pattern isn't found -- e.g. a future
+    huggingface_hub cache-layout change -- rather than guessing.
+    """
+    match = _SNAPSHOT_REVISION_PATTERN.search(resolved_path)
+    if match:
+        return match.group(1), "download_path"
+    return None, "unavailable"
+
+
+def preplace_checkpoint(
+    spec: CheckpointSpec,
+    *,
+    repo_id: str = CHECKPOINT_REPO_ID,
+    hf_hub_download_fn=None,
+    copy_fn=None,
+) -> CheckpointPlacementResult:
+    """NOT a compatibility shim -- see module note above.
+
+    Expands/resolves ``spec.cache_dir`` at call time, creates it if
+    missing. Returns immediately (``revision_source="preexisting_file"``,
+    ``resolved_revision=None``) if the destination file already exists --
+    ``hf_hub_download_fn`` is never called in that case, since we don't
+    know what placed a pre-existing file. Otherwise downloads, copies to
+    a temporary file in the same destination directory, and moves it into
+    place via ``os.replace()`` -- a failed ``copy_fn`` can never leave a
+    file at the final destination name, only (possibly) an orphaned
+    ``.tmp<pid>`` file beside it.
+
+    Args:
+        spec: which file and where it should end up.
+        repo_id: the HuggingFace Hub repo both checkpoints are hosted in.
+        hf_hub_download_fn: injectable for testing; defaults to the real
+            ``huggingface_hub.hf_hub_download``.
+        copy_fn: injectable for testing; defaults to ``shutil.copy``.
+    """
+    hf_hub_download_fn = hf_hub_download_fn or _default_hf_hub_download
+    copy_fn = copy_fn or shutil.copy
+
+    cache_dir = Path(spec.cache_dir).expanduser().resolve()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    destination = cache_dir / spec.filename
+
+    if destination.is_file():
+        return CheckpointPlacementResult(
+            filename=spec.filename,
+            destination_path=str(destination),
+            newly_placed=False,
+            resolved_revision=None,
+            revision_source="preexisting_file",
+        )
+
+    resolved = hf_hub_download_fn(
+        repo_id=repo_id, filename=spec.filename, cache_dir=str(cache_dir)
+    )
+    revision, revision_source = _extract_revision(str(resolved))
+
+    tmp_destination = destination.with_name(destination.name + f".tmp{os.getpid()}")
+    copy_fn(os.path.realpath(resolved), str(tmp_destination))
+    os.replace(str(tmp_destination), str(destination))
+
+    return CheckpointPlacementResult(
+        filename=spec.filename,
+        destination_path=str(destination),
+        newly_placed=True,
+        resolved_revision=revision,
+        revision_source=revision_source,
+    )
+
+
+def preplace_all_checkpoints(
+    *,
+    repo_id: str = CHECKPOINT_REPO_ID,
+    hf_hub_download_fn=None,
+    copy_fn=None,
+) -> Dict[str, CheckpointPlacementResult]:
+    """Places both RADGRAPH_CHECKPOINT and CHEXBERT_CHECKPOINT.
+
+    Returns:
+        ``{"radgraph.tar.gz": CheckpointPlacementResult(...),
+        "chexbert.pth": CheckpointPlacementResult(...)}``
+    """
+    return {
+        spec.filename: preplace_checkpoint(
+            spec, repo_id=repo_id, hf_hub_download_fn=hf_hub_download_fn, copy_fn=copy_fn
+        )
+        for spec in (RADGRAPH_CHECKPOINT, CHEXBERT_CHECKPOINT)
+    }

@@ -10,6 +10,7 @@ pipeline -- that is out of scope until Milestone 2.3.
 
 import json
 import types
+from pathlib import Path
 
 import pytest
 
@@ -426,3 +427,142 @@ def test_patch_all_fails_safe_on_unsupported_environment_before_import(monkeypat
     monkeypatch.setattr(builtins, "__import__", _fail_if_radgraph_imported)
     with pytest.raises(CompatibilityError):
         compat.patch_all()
+
+
+# --- Checkpoint cache preparation (NOT a compatibility shim) -------------
+
+
+def test_preplace_checkpoint_creates_cache_directory_when_missing(tmp_path):
+    cache_dir = tmp_path / "nested" / "cache_dir"
+    spec = compat.CheckpointSpec(filename="model.bin", cache_dir=str(cache_dir))
+
+    def fake_download(*, repo_id, filename, cache_dir):
+        return str(Path(cache_dir) / "models--fake--repo" / "snapshots" / "abc123" / filename)
+
+    def fake_copy(src, dst):
+        Path(dst).write_bytes(b"fake-bytes")
+
+    assert not cache_dir.exists()
+    result = compat.preplace_checkpoint(spec, hf_hub_download_fn=fake_download, copy_fn=fake_copy)
+    assert cache_dir.is_dir()
+    assert result.newly_placed is True
+    assert Path(result.destination_path).is_file()
+
+
+def test_preplace_checkpoint_downloads_and_extracts_revision_via_download_path(tmp_path):
+    cache_dir = tmp_path / "cache"
+    spec = compat.CheckpointSpec(filename="model.bin", cache_dir=str(cache_dir))
+
+    def fake_download(*, repo_id, filename, cache_dir):
+        return str(
+            Path(cache_dir) / "models--StanfordAIMI--RRG_scorers" / "snapshots"
+            / "deadbeef1234" / filename
+        )
+
+    def fake_copy(src, dst):
+        Path(dst).write_bytes(b"fake-bytes")
+
+    result = compat.preplace_checkpoint(spec, hf_hub_download_fn=fake_download, copy_fn=fake_copy)
+    assert result.newly_placed is True
+    assert result.resolved_revision == "deadbeef1234"
+    assert result.revision_source == "download_path"
+
+
+def test_preplace_checkpoint_skips_download_and_reports_preexisting_file_when_already_present(tmp_path):
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir(parents=True)
+    destination = cache_dir / "model.bin"
+    destination.write_bytes(b"already-here")
+    spec = compat.CheckpointSpec(filename="model.bin", cache_dir=str(cache_dir))
+
+    calls = []
+
+    def fake_download(**kwargs):
+        calls.append(kwargs)
+        raise AssertionError("hf_hub_download_fn should not be called when destination already exists")
+
+    result = compat.preplace_checkpoint(spec, hf_hub_download_fn=fake_download)
+    assert result.newly_placed is False
+    assert result.resolved_revision is None
+    assert result.revision_source == "preexisting_file"
+    assert calls == []
+
+
+def test_preplace_checkpoint_uses_temp_destination_then_atomic_replace(tmp_path):
+    cache_dir = tmp_path / "cache"
+    spec = compat.CheckpointSpec(filename="model.bin", cache_dir=str(cache_dir))
+    final_destination = cache_dir / "model.bin"
+
+    copy_calls = []
+
+    def fake_download(*, repo_id, filename, cache_dir):
+        return str(Path(cache_dir) / "snapshots" / "rev1" / filename)
+
+    def fake_copy(src, dst):
+        copy_calls.append((src, dst))
+        Path(dst).write_bytes(b"fake-bytes")
+
+    compat.preplace_checkpoint(spec, hf_hub_download_fn=fake_download, copy_fn=fake_copy)
+
+    assert len(copy_calls) == 1
+    _, copy_dst = copy_calls[0]
+    assert copy_dst != str(final_destination)
+    assert ".tmp" in copy_dst
+    assert final_destination.is_file()
+    assert not Path(copy_dst).exists()  # renamed into place by os.replace, not left behind
+
+
+def test_preplace_checkpoint_failed_copy_never_leaves_file_at_final_destination(tmp_path):
+    cache_dir = tmp_path / "cache"
+    spec = compat.CheckpointSpec(filename="model.bin", cache_dir=str(cache_dir))
+    final_destination = cache_dir / "model.bin"
+
+    def fake_download(*, repo_id, filename, cache_dir):
+        return str(Path(cache_dir) / "snapshots" / "rev1" / filename)
+
+    def failing_copy(src, dst):
+        raise OSError("simulated disk failure mid-copy")
+
+    with pytest.raises(OSError):
+        compat.preplace_checkpoint(spec, hf_hub_download_fn=fake_download, copy_fn=failing_copy)
+    assert not final_destination.exists()
+
+
+def test_preplace_checkpoint_unknown_revision_is_none_and_unavailable_not_unresolved_string(tmp_path):
+    cache_dir = tmp_path / "cache"
+    spec = compat.CheckpointSpec(filename="model.bin", cache_dir=str(cache_dir))
+
+    def fake_download(*, repo_id, filename, cache_dir):
+        # No "snapshots/<hash>/" segment -- simulates a future cache-layout change.
+        return str(Path(cache_dir) / "flat" / filename)
+
+    def fake_copy(src, dst):
+        Path(dst).write_bytes(b"fake-bytes")
+
+    result = compat.preplace_checkpoint(spec, hf_hub_download_fn=fake_download, copy_fn=fake_copy)
+    assert result.resolved_revision is None
+    assert result.revision_source == "unavailable"
+    assert result.resolved_revision != "unresolved"
+
+
+def test_preplace_all_checkpoints_returns_result_for_both_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        compat, "RADGRAPH_CHECKPOINT",
+        compat.CheckpointSpec("radgraph.tar.gz", str(tmp_path / "radgraph")),
+    )
+    monkeypatch.setattr(
+        compat, "CHEXBERT_CHECKPOINT",
+        compat.CheckpointSpec("chexbert.pth", str(tmp_path / "chexbert")),
+    )
+
+    def fake_download(*, repo_id, filename, cache_dir):
+        return str(Path(cache_dir) / "snapshots" / "rev1" / filename)
+
+    def fake_copy(src, dst):
+        Path(dst).write_bytes(b"fake-bytes")
+
+    results = compat.preplace_all_checkpoints(hf_hub_download_fn=fake_download, copy_fn=fake_copy)
+    assert set(results.keys()) == {"radgraph.tar.gz", "chexbert.pth"}
+    for result in results.values():
+        assert result.newly_placed is True
+        assert result.resolved_revision == "rev1"
