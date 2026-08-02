@@ -952,3 +952,123 @@ number to be trustworthy. Out of scope to resolve during Milestone 2.2.
   verification, not a clinical-correctness claim. Next milestone (2.3,
   fact-aware pair mining) awaits explicit approval before starting, per
   the project's per-milestone-approval workflow.
+
+## Milestones 2.3–2.4 — Implementation Cells (summary; see git history for full detail)
+
+Cells 17 through 23 implemented, respectively: fact-aware pair mining
+(Milestone 2.3, materialized and smoke-tested in Colab, merged via PR
+#3, `d54df1e`); Retriever core contracts/model/loss (Cell 19, merged
+`1fa883f`); dataset and collator (Cell 20, merged `5d4d6b1`); hard
+negative mining (Cell 21, merged `4e7759d`); embedding export, FAISS
+indexing, and a lightweight trainer (Cells 22–23, merged `813be31`).
+Each cell followed this project's established materialize-cell
+pattern (embedded file contents, sha256-verified writes, focused then
+full test suite run in the actual Colab kernel, structured PASS/FAIL
+summary) and was independently confirmed passing in the user's Colab
+environment before being committed. Per-cell narrative detail for these
+is not reconstructed here; see the git commit messages above and
+`docs/progress.md`'s Milestone 2.3/2.4 sections for what each
+implements. All four Milestone 2.4 commits are pushed to
+`claude/factmm-rag-repo-setup-o04jx3` with an open draft PR #4 against
+`main`, not yet merged.
+
+## Milestone 2.4G — Real Hugging Face Adapter + Checkpoint Dry Run
+
+- **Status**: SUCCESS (`REAL ADAPTER CHECK: PASS`)
+- **Execution date**: 2026-08-02
+- **Scope**: explicitly **not** Generator, Evaluation, or Innovation
+  work. Its only purpose was verifying that the already-committed,
+  unmodified `MultiModalRetriever` (`src/baseline/retrieval/model.py`)
+  can connect to and run through the real Hugging Face ecosystem — no
+  training, no fine-tuning, no dataset download, no paper-scale
+  experiment. No `src/` files were written by this cell (a standalone
+  diagnostic script, not the project's materialize-cell pattern); no
+  git operations; no PR changes.
+- **Runtime information** (as reported by the cell): Python 3.12.13
+  (CPython); `torch` 2.11.0+cpu; `transformers` 4.57.6; `tokenizers`
+  0.22.2; `accelerate` 1.14.0; `faiss` 1.14.3; CUDA available: `False`;
+  GPU name: N/A (no CUDA device); RAM: 12.7 GB total.
+- **Cell content**: (1) runtime/version detection; (2) attempt real
+  `CLIPImageProcessor`/`CLIPVisionModel` construction from
+  `RetrieverConfig.clip_model_name` and real `T5Tokenizer`/
+  `T5EncoderModel` construction from `RetrieverConfig.t5_model_name`
+  (each preceded by a lightweight `HfApi().model_info()` preflight so
+  failures are classified as `authentication_required` /
+  `repository_unavailable` / `network_error` / `version_incompatibility`
+  / `architecture_mismatch`, never collapsed into one generic error);
+  (3) report resolved revision, hidden size, image size, tokenizer
+  vocab size; (4) one synthetic image + one synthetic report through
+  real image preprocessing, real tokenization, and a real forward pass
+  (standalone `T5EncoderModel` probe, deliberately distinct from
+  `MultiModalRetriever`'s own `_default_t5_factory`, which constructs
+  the full encoder-decoder `T5Model` its `_pool()` needs); (5) verify
+  embedding dimensions, finite outputs, normalization, and the scaled
+  similarity path through a real `MultiModalRetriever` built via its own
+  real default factories; (6) attempt a lightweight (metadata-only)
+  warm-start checkpoint reachability check against
+  `OpenMatch/marvel-ance-clueweb`, gated behind an
+  `ATTEMPT_FULL_CHECKPOINT_DOWNLOAD=False` flag so the actual multi-
+  hundred-MB weight file is not downloaded by default; (7)/(8)/(9)
+  compatibility report (PASS/WARNING/FAIL per component) and final
+  `REAL ADAPTER CHECK` summary.
+- **Result — real image side**: `openai/clip-vit-base-patch32`,
+  resolved revision `3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268`. Real
+  `CLIPVisionModel` + `CLIPImageProcessor` constructed successfully
+  (`preprocessor_config.json`, `config.json`, `pytorch_model.bin`
+  downloaded — 605 MB). `hidden_size=768`, `image_size=224`,
+  `processor.size={'height': 224, 'width': 224}`. Real forward pass
+  succeeded: `last_hidden_state` shape `(1, 50, 768)`, all finite.
+- **Result — real text side**: `OpenMatch/t5-ance`, resolved revision
+  `bf70ee32b49c3e8c1d40982feebbc3b9930eeab4`. Real `T5Tokenizer`
+  constructed (`vocab_size=32100`, `model_max_length=512`); real
+  `T5EncoderModel` constructed (`model.safetensors` + `config.json`
+  downloaded — 605 MB + 892 MB across the tokenizer/model repos,
+  `hidden_size=768`). Real forward pass succeeded: `last_hidden_state`
+  shape `(1, 26, 768)`, all finite.
+- **Result — real `MultiModalRetriever` integration** (unmodified
+  implementation, real default factories, not the standalone probe
+  above): constructed successfully, `image_dim=768`, `text_dim=768`.
+  `encode_images_only` → shape `(1, 768)`; `encode_text_only` → shape
+  `(1, 768)`; `encode_images_with_text` (joint) → shape `(1, 768)`; all
+  outputs finite (no NaN/Inf). L2 normalization confirmed: query
+  embedding norm `0.9999999403953552` (expected ≈1.0). `scaled_similarity`
+  ran under `temperature_mode='learned_logit_scale'`, `scores.shape=(1,
+  1)`, finite. Both `learned_logit_scale` and `fixed` temperature modes
+  independently constructed and verified against the real weights
+  (reusing the already-downloaded/cached files, no re-download).
+- **Result — warm-start checkpoint reachability**: `OpenMatch/marvel-
+  ance-clueweb` confirmed reachable, resolved revision
+  `19bd4191e36a285ffa13cad901c670cd785a4aec`; candidate checkpoint file
+  `model.best.pt` identified via `list_repo_files`. Full checkpoint
+  download and `load_warm_start_checkpoint(strict=False)` were
+  **intentionally not attempted** (`ATTEMPT_FULL_CHECKPOINT_DOWNLOAD=
+  False`) — reported as `WARNING`, not `FAIL`, per the cell's design
+  ("if unavailable/not attempted, detect gracefully, report why,
+  continue — do not fail the cell").
+- **Compatibility report** (7 canonical categories, all `PASS` except
+  the by-design `WARNING`): `image_encoder` PASS, `tokenizer` PASS,
+  `text_encoder` PASS, `embedding_dimensions` PASS, `forward_pass` PASS,
+  `warm_start` WARNING (see above — expected, not a failure),
+  `temperature_modes` PASS. Additional non-canonical checks also PASS:
+  `normalization_compatibility`, `scaled_similarity_path`.
+- **No compatibility issue was discovered.** `MultiModalRetriever` was
+  not modified as a result of this dry run, per the cell's explicit
+  rule ("if a compatibility issue is discovered, stop and explain it
+  instead of silently patching the implementation").
+- **Scope reminder**: this verifies real-model construction and forward
+  compatibility only. No training, fine-tuning, dataset download, or
+  paper-scale reproduction occurred, and no claim about retrieval
+  quality or scientific performance is made. Real-data training remains
+  entirely unperformed (`docs/risk_register.md` #17); this dry run ran
+  on a CPU-only runtime (`docs/risk_register.md` #16); the full MARVEL
+  warm-start weight load remains untested (`docs/risk_register.md` #4).
+- **Generated artifacts**: none persisted to the repository — this cell
+  writes no `src/` files, runs no project test suite, and performs no
+  git operations.
+- **Milestone status**: **Milestone 2.4 (Retriever) is now implementation
+  complete, synthetic training validated, and real Hugging Face adapter
+  forward-compatibility verified.** Draft PR #4 ("Milestone 2.4: complete
+  baseline Retriever stack") is open against `main`, not yet merged.
+  Milestone 2.5 (retrieval-augmented generator) has not been started
+  and awaits explicit approval, per the project's per-milestone-approval
+  workflow.

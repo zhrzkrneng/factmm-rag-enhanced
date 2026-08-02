@@ -22,8 +22,8 @@ component, see `docs/reproduction_matrix.md`.
 |---|---|
 | 2.1 — Data pipeline | COMPLETE (unit + integration tested in Colab) |
 | 2.2 — RadGraph processing | COMPLETE (compatibility layer + `annotator.py` implementation, merged into `main`, verified end-to-end via real Cell 16 smoke test) |
-| 2.3 — Fact-aware pair mining | NOT STARTED |
-| 2.4 — Retriever | NOT STARTED |
+| 2.3 — Fact-aware pair mining | COMPLETE (`src/baseline/pair_mining/`, merged into `main` via PR #3, merge commit `d54df1e`) |
+| 2.4 — Retriever | **Implementation complete, synthetic training validated, and real Hugging Face adapter forward-compatibility verified.** Four commits (`1fa883f`, `5d4d6b1`, `4e7759d`, `813be31`) pushed to `claude/factmm-rag-repo-setup-o04jx3`; open draft PR #4 targeting `main`, not yet merged |
 | 2.5 — Retrieval-augmented generator | NOT STARTED |
 | 2.6 — Evaluation | NOT STARTED |
 
@@ -156,10 +156,127 @@ the scope reminders throughout this section.
   cause risk from the Cell 14 rerun) remains open; Cell 16 did not
   investigate it and its resolution is not required for Milestone 2.2.
 
+## Milestone 2.3 — Fact-Aware Pair Mining
+
+**Status: COMPLETE.** `src/baseline/pair_mining/similarity.py` and
+`src/baseline/pair_mining/mining.py` implement the paper's Eq. 1/2
+factual-similarity mining procedure (`chexbert_similarity`,
+`radgraph_similarity`, `combined_score`, `PairMiningConfig`,
+`PairMiner`), with both the paper-explicit (`top_k=2`) and
+official-repository (`top_k=3`, thresholds `chex=1.0`/`radg=0.4`)
+defaults recorded and never silently conflated (see
+`docs/risk_register.md` #1b). Implemented, unit-tested, and verified
+against a real end-to-end synthetic smoke test in the user's Colab
+environment (15-record dataset, 6 hand-verified scenarios, resume and
+shuffle-determinism checks). Merged into `main` via a new draft PR #3
+("Milestone 2.3: implement baseline Fact-Aware Pair Mining"), merge
+commit `d54df1e`.
+
+## Milestone 2.4 — Retriever
+
+**Status: implementation complete, synthetic training validated, and
+real Hugging Face adapter forward-compatibility verified.**
+
+### Implementation (four commits, pushed, open draft PR #4)
+
+- `1fa883f` — **Retriever core**: `RetrieverConfig`, `MultiModalRetriever`
+  (`src/baseline/retrieval/model.py`) — CLIP-ViT vision tower + T5
+  patch-splicing fusion, three audited encode paths
+  (`encode_images_only`/`encode_text_only`/`encode_images_with_text`),
+  both temperature modes (`fixed` vs. `learned_logit_scale`) kept
+  explicitly configurable (resolves `docs/risk_register.md` #1c as "both
+  implemented, never silently chosen"), warm-start loading with
+  always-reported missing/unexpected keys — plus `loss.py`'s
+  single-direction `contrastive_loss`, matching the official code exactly.
+- `5d4d6b1` — **Dataset and collator**: `src/baseline/retrieval/dataset.py`
+  — `RetrievalTrainingRow`, `RetrieverTrainingDataset`,
+  `RetrievalCollator` (Stage 1 rectangular in-batch-negative batching;
+  Stage 2 padded/masked per-query candidate batching — a disclosed,
+  deliberate divergence from the official code's flat/whole-batch-
+  negative-pool scheme, see `docs/risk_register.md`).
+- `4e7759d` — **Hard-negative mining**: `src/baseline/retrieval/
+  hard_negatives.py` — `HardNegativeMiningConfig`, `HardNegativeMiner`,
+  reproducing the official `gen_hard_negatives.py`'s embedding-top-N +
+  factual-dissimilarity selection (without FAISS, by design for this
+  milestone) plus deliberate patient-leakage/cross-dataset safety checks
+  beyond what the official script itself does.
+- `813be31` — **Embedding export, FAISS indexing, and a lightweight
+  trainer**: `src/retrieval/embeddings.py` (`export_embeddings`),
+  `src/retrieval/index.py` (`FaissFlatIPIndex`, exact FlatIP, matching
+  the official code's own index type), and
+  `src/baseline/retrieval/trainer.py` (`RetrieverTrainer`,
+  `RetrieverTrainerConfig`) — a smoke-test-scale training loop (not the
+  paper-scale reproduction) with checkpoint save/load, sha256 integrity
+  verification, and genuine train-resume.
+
+**321/321 full project test suite passing** across all four commits.
+Synthetic end-to-end verification (fake encoders, tiny data only)
+confirmed real gradient flow: forward pass → contrastive loss →
+backward → optimizer step → checkpoint save → reload → embedding
+export → FAISS search, all in one smoke test
+(`test_synthetic_end_to_end_smoke_lifecycle`).
+
+### Milestone 2.4G — Real Hugging Face Adapter + Checkpoint Dry Run
+
+A follow-up verification step, explicitly **not** Generator, Evaluation,
+or Innovation work — its only purpose was confirming
+`MultiModalRetriever` (unmodified) can actually connect to and run
+through the real Hugging Face ecosystem, with no training, no
+fine-tuning, no dataset download, and no paper-scale experiment. Full
+detail: `docs/colab_execution_log.md`, "Milestone 2.4G" entry.
+
+**Runtime**: Python 3.12.13, `torch` 2.11.0+cpu, `transformers` 4.57.6,
+`tokenizers` 0.22.2, `accelerate` 1.14.0, `faiss` 1.14.3, CPU-only (no
+CUDA device).
+
+**Real image side**: `openai/clip-vit-base-patch32` (resolved revision
+`3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268`) — real `CLIPVisionModel` +
+`CLIPImageProcessor` constructed (hidden size 768, image size 224), real
+forward pass succeeded.
+
+**Real text side**: `OpenMatch/t5-ance` (resolved revision
+`bf70ee32b49c3e8c1d40982feebbc3b9930eeab4`) — real `T5Tokenizer` +
+`T5EncoderModel` constructed (hidden size 768, vocab size 32100), real
+forward pass succeeded. (`T5EncoderModel` here is a standalone
+connectivity probe, distinct from `MultiModalRetriever`'s own
+`_default_t5_factory`, which constructs the full encoder-decoder
+`T5Model` its `_pool()` actually needs — see the model docstring and
+`docs/colab_execution_log.md` for why these are deliberately two
+different checks, not a contradiction.)
+
+**Real `MultiModalRetriever` integration** (project's own real default
+factories, architecture unmodified): image-only embedding shape
+`(1, 768)`, text-only embedding shape `(1, 768)`, joint image+text
+embedding shape `(1, 768)`, all outputs finite (no NaN/Inf), L2
+normalization verified (query embedding norm `0.9999999403953552` ≈
+1.0), scaled similarity verified, both `learned_logit_scale` and
+`fixed` temperature modes verified against the real weights.
+
+**Warm-start checkpoint**: `OpenMatch/marvel-ance-clueweb` confirmed
+reachable (resolved revision `19bd4191e36a285ffa13cad901c670cd785a4aec`),
+candidate checkpoint file `model.best.pt` identified. Full checkpoint
+download/load was **intentionally not attempted** (kept as a disclosed
+`WARNING`, not a `FAIL` — this is a scope decision, not a failure; see
+`docs/risk_register.md`).
+
+**Scope**: this verifies real-model construction and forward
+compatibility only. No training, fine-tuning, dataset download, or
+paper-scale reproduction occurred, and no claim about retrieval quality
+or scientific performance is made.
+
+**No compatibility issue was discovered** — `MultiModalRetriever` was
+not modified as a result of this dry run.
+
 ## Next Step
 
-Milestone 2.2 (RadGraph processing) is complete: the compatibility
-layer, the annotation pipeline implementation, and a real end-to-end
-Colab smoke test (Cell 16) are all done. Next milestone is 2.3
-(fact-aware pair mining), which awaits explicit approval before
-starting, per the project's per-milestone-approval workflow.
+Milestone 2.4 (Retriever) is implementation-complete, synthetically
+validated, and real-Hugging-Face-adapter-verified. Draft PR #4
+("Milestone 2.4: complete baseline Retriever stack") is open against
+`main`, not yet merged — awaiting approval. Remaining open risks (full
+MARVEL warm-start weight loading untested, CPU-only runtime, no
+real-data training performed, the train/inference representation
+mismatch, and the Stage 2 batch/loss divergence from official code) are
+tracked in `docs/risk_register.md` and do not block moving to Milestone
+2.5 once approved. Milestone 2.5 (retrieval-augmented generator) has
+not been started and awaits explicit approval, per the project's
+per-milestone-approval workflow.
