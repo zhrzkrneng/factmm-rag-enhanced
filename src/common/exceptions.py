@@ -75,3 +75,22 @@ class RetrievalDatasetError(Exception):
     loaded records -- never silently dropped or treated as an empty
     dataset.
     """
+
+
+class RetrievalIndexError(Exception):
+    """Raised when embedding export or FAISS index construction/search
+    checks fail: an empty corpus, a duplicate QueryKey, an inconsistent
+    or wrong embedding dimension, a non-finite (NaN/Inf) embedding
+    value, a claimed-normalized vector that is not actually unit-norm,
+    or an invalid top_k -- never silently coerced or ignored.
+    """
+
+
+class RetrieverTrainingError(Exception):
+    """Raised when the retriever training loop's own runtime checks
+    fail: a non-finite loss or gradient, a batch missing the keys its
+    configured training stage requires, a checkpoint that fails
+    integrity verification (sha256 mismatch) or is missing a required
+    field, or an embedding-dimension mismatch between a query and
+    candidate encoding -- never silently skipped, retried, or trusted.
+    """

@@ -1,5 +1,6 @@
 """Unit tests for src/baseline/retrieval/dataset.py."""
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -52,7 +53,17 @@ def _pair_row(dataset, patient_id, study_id, positive_keys):
 
 
 class FakeImageProcessor:
-    """Deterministic callable(List[str]) -> Tensor[N, 3, H, W]."""
+    """Deterministic callable(List[str]) -> Tensor[N, 3, H, W].
+
+    Seeds each path's pseudo-image from a sha256 digest, not Python's
+    built-in hash() -- str hashing is randomized per-process
+    (PYTHONHASHSEED) unless explicitly disabled, so hash(path) would
+    make this "deterministic" fake produce different image content
+    across independent process runs even for the exact same path,
+    silently breaking any test or downstream consumer (e.g. a
+    training smoke test) that expects batch content to be reproducible
+    across runs.
+    """
 
     def __init__(self, channels: int = 3, height: int = 4, width: int = 4):
         self._shape = (channels, height, width)
@@ -60,7 +71,8 @@ class FakeImageProcessor:
     def __call__(self, paths):
         tensors = []
         for path in paths:
-            seed = abs(hash(path)) % (2**31)
+            digest = hashlib.sha256(path.encode("utf-8")).hexdigest()
+            seed = int(digest, 16) % (2**31)
             generator = torch.Generator().manual_seed(seed)
             tensors.append(torch.rand(self._shape, generator=generator))
         return torch.stack(tensors, dim=0)
