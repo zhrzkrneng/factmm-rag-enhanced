@@ -54,3 +54,14 @@ class AnnotationError(Exception):
     radgraph/f1chexbert themselves happen to raise on a real inference
     failure, which propagates as-is rather than being wrapped here.
     """
+
+
+class PairMiningError(Exception):
+    """Raised when factual pair mining's own schema/config checks fail:
+    a malformed or duplicate-keyed existing output line, a referenced
+    positive key missing from the current candidate corpus, a stale
+    existing output/metadata produced under an incompatible
+    PairMiningConfig or config_version, or a positive_keys/scores
+    structural mismatch -- never silently ignored or treated as an
+    empty resume.
+    """
