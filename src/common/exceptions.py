@@ -65,3 +65,13 @@ class PairMiningError(Exception):
     structural mismatch -- never silently ignored or treated as an
     empty resume.
     """
+
+class RetrievalDatasetError(Exception):
+    """Raised when the retriever training dataset's own schema checks
+    fail: a malformed annotated-record or pair-mining-output JSONL
+    line, a duplicate composite (dataset, patient_id, study_id) key, a
+    positive or hard-negative key that violates the cross-dataset
+    invariant, or a referenced positive/negative key missing from the
+    loaded records -- never silently dropped or treated as an empty
+    dataset.
+    """
