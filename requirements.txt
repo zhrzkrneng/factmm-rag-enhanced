@@ -1,6 +1,7 @@
 torch
 torchvision
 transformers
+Pillow
 datasets
 pandas
 numpy
