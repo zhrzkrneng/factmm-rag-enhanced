@@ -94,3 +94,15 @@ class RetrieverTrainingError(Exception):
     field, or an embedding-dimension mismatch between a query and
     candidate encoding -- never silently skipped, retried, or trusted.
     """
+
+
+class RAGDatasetError(Exception):
+    """Raised when the RAG dataset builder's own schema/config checks
+    fail: a query/corpus record missing a configured rag_data_mode/
+    output_data_mode/image_path field, a KNN ranking referencing a
+    candidate key missing from the corpus or violating the
+    cross-dataset invariant, a malformed or duplicate-keyed existing
+    output line, or an existing output/metadata produced under an
+    incompatible RAGDatasetBuilderConfig -- never silently dropped or
+    treated as an empty resume.
+    """
