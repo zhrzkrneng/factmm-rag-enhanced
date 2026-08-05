@@ -13,27 +13,39 @@ validation, malformed-row handling, deterministic ordering, resume-safe
 load metadata) -- everything §9.1/§11.1 of the contract needs before any
 metric can be computed.
 
-Cell 31 (this addition) implements three of the contract's §8 metric
-wrappers -- ROUGE-L, BLEU-4, BERTScore -- behind one uniform
-GenerationMetricWrapper interface, plus an explicit (never globally
-mutable) metric registry and deterministic mock wrappers for testing
-any future code that consumes the registry generically.
-F1RadGraph/F1CheXbert (contract §8's other two wrappers), the
-evaluate_generation() orchestrator that calls all five together,
-retrieval metrics, bootstrap significance, and Oracle evaluation are
-all explicitly out of scope here -- later cells. No external metric
-library (radgraph, f1chexbert) is imported by this module; rouge,
-evaluate, and bert_score ARE now real (lazy) dependencies of this
-module's default factories -- never imported at module scope, only
-inside a factory function invoked no earlier than a wrapper's first
-real compute() call, and never at all when a fake factory is injected
-(every unit test in this project injects fakes for these three; real
-invocation is reserved for a dedicated Colab dry-run cell, matching
-HFGeneratorAdapter's and RadGraphAnnotator's own established
-discipline). Added to requirements.txt in this same change: rouge,
-evaluate, bert-score (matching the precedent set when Pillow was added
-alongside HFGeneratorAdapter in Milestone 2.5) -- pytrec_eval remains
-deferred to its own future retrieval-metrics cell.
+Cell 31 implemented three of the contract's §8 metric wrappers --
+ROUGE-L, BLEU-4, BERTScore -- behind one uniform GenerationMetricWrapper
+interface, plus an explicit (never globally mutable) metric registry and
+deterministic mock wrappers for testing any future code that consumes
+the registry generically. No external metric library (radgraph,
+f1chexbert) was imported by this module at that point; rouge, evaluate,
+and bert_score became real (lazy) dependencies of that cell's default
+factories.
+
+Cell 32 (this addition) implements the contract's remaining two §8
+wrappers -- F1RadGraph and F1CheXbert -- completing the full 5-metric
+set. F1CheXbert is split into two DELIBERATELY SEPARATE wrapper classes
+never to be conflated: DatasetF1ChexbertMetric (dataset-level
+micro-F1 -- the paper's own final-reporting number, contract
+§2/§3.1/§4) and InstanceF1ChexbertMetric (instance-level agreement,
+contract §2 Appendix A.3's np.sum(ref==hyp)/5 formula, used for pair
+mining/Oracle construction/per-example significance testing) -- see
+their own docstrings below for the full disambiguation. radgraph and
+f1chexbert are now also real (lazy) dependencies of this module's
+default factories -- never imported at module scope, only inside a
+factory function invoked no earlier than a wrapper's first real
+compute() call, reusing (never duplicating) the already-established,
+version-gated src.baseline.radgraph.compat shim layer from Milestone
+2.2. Every unit test in this cell injects fakes for radgraph/f1chexbert
+too; real invocation remains reserved for a dedicated Colab dry-run
+cell, not implemented here. requirements.txt is unchanged by this cell
+-- radgraph/f1chexbert are installed by Cell 14's own dedicated
+mechanism, not via requirements.txt, matching Milestone 2.2's existing
+convention.
+
+The evaluate_generation() orchestrator that calls all five wrappers
+together, retrieval metrics, bootstrap significance, and Oracle
+evaluation remain explicitly out of scope here -- later cells.
 
 Pairing is strict query_key-based by default
 (GenerationMetricsConfig.pairing_mode="by_query_key"): both reference
@@ -896,13 +908,238 @@ class MockGenerationMetricWrapper(GenerationMetricWrapper):
 
 
 # ---------------------------------------------------------------------------
+# Clinical metric wrappers (Cell 32): F1RadGraph, F1CheXbert
+#
+# F1CheXbert is deliberately split into TWO separate wrapper classes,
+# never one: DatasetF1ChexbertMetric (dataset-level micro-F1, contract
+# §2/§3.1/§4 -- the paper's own final-reporting F1CheXbert) and
+# InstanceF1ChexbertMetric (instance-level agreement, contract §2
+# Appendix A.3's np.sum(ref==hyp)/5 formula, used for pair mining and
+# per-example significance testing). Both wrap the exact same
+# f1chexbert.F1CheXbert class -- constructed identically -- but call
+# genuinely different methods on it (__call__ for the aggregate
+# classification report vs. get_label() per example) and compute
+# genuinely different numbers. Their .name values ("f1chexbert" vs.
+# "f1chexbert_instance") match GenerationMetricsResult.f1_chexbert /
+# GenerationExampleScore.f1_chexbert_instance (Cell 30) exactly, on
+# purpose -- the clearest possible disambiguation against ever
+# conflating the two.
+# ---------------------------------------------------------------------------
+
+# Mirrors (duplicated, not imported -- see module docstring's note on
+# preserving the src.evaluation (shared) -> src.baseline (consumer)
+# layering direction) src.baseline.radgraph.annotator.CHEXBERT_5_INDICES
+# / CHEXBERT_14_CLASSES, already empirically verified against a real
+# f1chexbert.get_label() call in Colab (Milestone 2.2, Cell 14) --
+# f1chexbert.get_label() returns a bare 14-element list with no field
+# names; these are the fixed indices of the paper's 5-class subset
+# (Cardiomegaly, Edema, Consolidation, Atelectasis, Pleural Effusion)
+# within it.
+_CHEXBERT_14_LENGTH = 14
+_CHEXBERT_5_INDICES: Tuple[int, ...] = (1, 4, 5, 7, 9)
+
+
+def _reduce_chexbert_14_to_5(label_vector: Sequence[int], *, metric_name: str) -> Tuple[int, ...]:
+    if len(label_vector) != _CHEXBERT_14_LENGTH:
+        raise EvaluationError(
+            f"{metric_name}: expected a {_CHEXBERT_14_LENGTH}-class CheXbert label "
+            f"vector from get_label(), got length {len(label_vector)}"
+        )
+    return tuple(label_vector[i] for i in _CHEXBERT_5_INDICES)
+
+
+def _chexbert_instance_agreement(label_a: Sequence[int], label_b: Sequence[int]) -> float:
+    """The exact same formula as
+    src.baseline.pair_mining.similarity.chexbert_similarity (elementwise
+    agreement over the 5-class subset, contract §2 Appendix A.3:
+    np.sum(ref==hyp)/5) -- intentionally REIMPLEMENTED here, not
+    imported, to avoid a src.evaluation -> src.baseline layering
+    inversion (src.baseline already depends on src.evaluation being
+    shared underneath it, never the reverse). Both implementations are
+    independently tested against the official formula; a dedicated test
+    in this cell also cross-checks the two produce identical output."""
+    if len(label_a) != len(label_b) or len(label_a) == 0:
+        raise EvaluationError(
+            f"f1chexbert_instance: label vectors must be equal-length and non-empty, "
+            f"got lengths {len(label_a)} and {len(label_b)}"
+        )
+    matches = sum(1 for a, b in zip(label_a, label_b) if a == b)
+    return matches / len(label_a)
+
+
+def _default_f1radgraph_factory(config: GenerationMetricsConfig) -> object:
+    from src.baseline.radgraph import compat  # reuses Milestone 2.2's already-established,
+    # version-gated shim layer -- never a second, divergent one.
+
+    compat.patch_all()
+    compat.preplace_all_checkpoints()
+    from radgraph import F1RadGraph  # lazy: only imported when actually constructing
+
+    return F1RadGraph(reward_level=config.radgraph_reward_level, model_type=config.radgraph_model_type)
+
+
+def _default_f1chexbert_factory(config: GenerationMetricsConfig) -> object:
+    from src.baseline.radgraph import compat
+
+    compat.patch_all()
+    compat.preplace_all_checkpoints()
+    from f1chexbert import F1CheXbert  # lazy: only imported when actually constructing
+
+    return F1CheXbert(device=config.chexbert_device)
+
+
+class F1RadGraphMetric(_LazyLibraryMixin, GenerationMetricWrapper):
+    """Wraps radgraph.F1RadGraph (contract §3.1, §4) -- the SAME
+    radgraph==0.0.9 package already pinned/shimmed by
+    src.baseline.radgraph.compat (Milestone 2.2). Unlike
+    RadGraphAnnotator's eager __init__-time compat.patch_all() call
+    (Milestone 2.2's own established pattern), this wrapper's default
+    factory calls compat.patch_all() lazily, on first construction --
+    preserving the same "no radgraph import before patching" invariant
+    while satisfying this cell's own lazy-loading requirement.
+
+    Official evaluation.py unpacks the call as
+    `score, _, _, _ = f1radgraph(hyps=hyps, refs=refs)`, discarding
+    elements 2-4. This wrapper additionally captures element 1 (the
+    per-example reward list) for MetricComputation.per_example_scores --
+    a REASONABLE_INFERENCE about the radgraph package's public
+    F1RadGraph API shape (general knowledge of the package, not
+    independently re-verified against source in this sandbox), guarded
+    by an explicit length check against hyps/refs rather than trusted
+    blindly; a shape mismatch raises EvaluationError instead of
+    silently producing a malformed per-example tuple."""
+
+    name = "f1radgraph"
+
+    def __init__(
+        self, config: GenerationMetricsConfig, *, f1radgraph_factory: Optional[Callable[[], object]] = None
+    ) -> None:
+        self._config = config
+        self._factory = f1radgraph_factory or (lambda: _default_f1radgraph_factory(config))
+        self._instance: Optional[object] = None
+
+    def compute(self, hyps: Sequence[str], refs: Sequence[str]) -> MetricComputation:
+        _validate_hyps_refs(self.name, hyps, refs)
+        scorer = self._get_instance(metric_name=self.name)
+        try:
+            result = scorer(hyps=list(hyps), refs=list(refs))
+            mean_reward = float(result[0])
+            reward_list = result[1]
+            per_example_scores = tuple(float(x) for x in reward_list)
+            if len(per_example_scores) != len(hyps):
+                raise ValueError(
+                    f"f1radgraph reward_list length {len(per_example_scores)} != "
+                    f"{len(hyps)} input examples"
+                )
+        except Exception as exc:
+            if isinstance(exc, EvaluationError):
+                raise
+            category, detail = _classify_metric_dependency_error(exc)
+            raise EvaluationError(f"{self.name}: {category}: {detail}") from exc
+        return MetricComputation(
+            metric_name=self.name, corpus_score=mean_reward, per_example_scores=per_example_scores
+        )
+
+
+class DatasetF1ChexbertMetric(_LazyLibraryMixin, GenerationMetricWrapper):
+    """Dataset-level F1CheXbert (contract §2/§3.1/§4): the micro-averaged
+    F1-score across the paper's 5 observations, computable only over an
+    entire corpus -- NEVER per-example (per_example_scores is always
+    None here, same shape-of-limitation as Bleu4Metric). Wraps
+    f1chexbert.F1CheXbert.__call__(hyps=, refs=), reporting element 3's
+    ("class_report_5") micro-avg f1-score -- verbatim
+    class_report_5["micro avg"]["f1-score"], matching official
+    evaluation.py's own reported line exactly."""
+
+    name = "f1chexbert"
+
+    def __init__(
+        self, config: GenerationMetricsConfig, *, f1chexbert_factory: Optional[Callable[[], object]] = None
+    ) -> None:
+        self._config = config
+        self._factory = f1chexbert_factory or (lambda: _default_f1chexbert_factory(config))
+        self._instance: Optional[object] = None
+
+    def compute(self, hyps: Sequence[str], refs: Sequence[str]) -> MetricComputation:
+        _validate_hyps_refs(self.name, hyps, refs)
+        chexbert = self._get_instance(metric_name=self.name)
+        try:
+            result = chexbert(hyps=list(hyps), refs=list(refs))
+            class_report_5 = result[3]
+            corpus_score = float(class_report_5["micro avg"]["f1-score"])
+        except Exception as exc:
+            if isinstance(exc, EvaluationError):
+                raise
+            category, detail = _classify_metric_dependency_error(exc)
+            raise EvaluationError(f"{self.name}: {category}: {detail}") from exc
+        return MetricComputation(metric_name=self.name, corpus_score=corpus_score, per_example_scores=None)
+
+
+class InstanceF1ChexbertMetric(_LazyLibraryMixin, GenerationMetricWrapper):
+    """Instance-level F1CheXbert agreement (contract §2 Appendix A.3):
+    np.sum(ref_labels_5 == hyp_labels_5) / 5, per example -- a
+    COMPLETELY DIFFERENT computation from DatasetF1ChexbertMetric's
+    dataset-level micro-F1, despite both wrapping the same
+    f1chexbert.F1CheXbert class. Calls .get_label(text) per hyp/ref (the
+    exact same call already verified in real Colab execution by
+    src.baseline.radgraph.annotator.RadGraphAnnotator, Milestone 2.2),
+    reduces each 14-class vector to the paper's 5-class subset
+    (_reduce_chexbert_14_to_5), then scores agreement
+    (_chexbert_instance_agreement -- the same formula as this project's
+    already-implemented src.baseline.pair_mining.similarity.chexbert_similarity,
+    reimplemented rather than imported, see that function's own
+    docstring). corpus_score is this wrapper's own mean of per-example
+    scores -- a reasonable aggregate, not itself an official-code
+    quantity (the official pipeline never aggregates instance-level
+    CheXbert scores across a corpus; only per-pair, for pair mining and
+    Oracle construction)."""
+
+    name = "f1chexbert_instance"
+
+    def __init__(
+        self, config: GenerationMetricsConfig, *, f1chexbert_factory: Optional[Callable[[], object]] = None
+    ) -> None:
+        self._config = config
+        self._factory = f1chexbert_factory or (lambda: _default_f1chexbert_factory(config))
+        self._instance: Optional[object] = None
+
+    def compute(self, hyps: Sequence[str], refs: Sequence[str]) -> MetricComputation:
+        _validate_hyps_refs(self.name, hyps, refs)
+        chexbert = self._get_instance(metric_name=self.name)
+        try:
+            per_example_scores = tuple(
+                _chexbert_instance_agreement(
+                    _reduce_chexbert_14_to_5(chexbert.get_label(hyp), metric_name=self.name),
+                    _reduce_chexbert_14_to_5(chexbert.get_label(ref), metric_name=self.name),
+                )
+                for hyp, ref in zip(hyps, refs)
+            )
+        except Exception as exc:
+            if isinstance(exc, EvaluationError):
+                raise
+            category, detail = _classify_metric_dependency_error(exc)
+            raise EvaluationError(f"{self.name}: {category}: {detail}") from exc
+        corpus_score = sum(per_example_scores) / len(per_example_scores)
+        return MetricComputation(
+            metric_name=self.name, corpus_score=corpus_score, per_example_scores=per_example_scores
+        )
+
+
+# ---------------------------------------------------------------------------
 # Metric registry -- explicit, freshly-constructed, never a shared
 # mutable module-level dict (no hidden global state: two calls return
 # fully independent wrapper instances with independent lazy-construction
 # caches).
 # ---------------------------------------------------------------------------
 
-_REGISTERED_METRIC_NAMES: Tuple[str, ...] = ("rouge_l", "bleu4", "bert_score")
+_REGISTERED_METRIC_NAMES: Tuple[str, ...] = (
+    "rouge_l",
+    "bleu4",
+    "bert_score",
+    "f1radgraph",
+    "f1chexbert",
+    "f1chexbert_instance",
+)
 
 
 def build_metric_registry(
@@ -911,17 +1148,27 @@ def build_metric_registry(
     rouge_factory: Optional[Callable[[], object]] = None,
     bleu_factory: Optional[Callable[[], object]] = None,
     bert_scorer_factory: Optional[Callable[[], object]] = None,
+    f1radgraph_factory: Optional[Callable[[], object]] = None,
+    f1chexbert_factory: Optional[Callable[[], object]] = None,
 ) -> Dict[str, GenerationMetricWrapper]:
-    """Builds the real (lazy) generation-metric registry for this cell's
-    scope: rouge_l and bert_score are always present; bleu4 is present
-    iff config.bleu_enabled (contract §7.1 -- bleu_enabled exists
-    precisely so BLEU-4's OFFICIAL_REPOSITORY-only, non-paper-reported
-    status, contract §2/§4/§18, can be turned off without touching call
-    sites). F1RadGraph/F1CheXbert are not registered here -- a later
-    cell's scope."""
+    """Builds the real (lazy) generation-metric registry: rouge_l,
+    bert_score, f1radgraph, f1chexbert, and f1chexbert_instance are
+    always present; bleu4 is present iff config.bleu_enabled (contract
+    §7.1 -- bleu_enabled exists precisely so BLEU-4's
+    OFFICIAL_REPOSITORY-only, non-paper-reported status, contract
+    §2/§4/§18, can be turned off without touching call sites).
+    f1chexbert_factory, if provided, is used for BOTH
+    DatasetF1ChexbertMetric and InstanceF1ChexbertMetric (each still
+    lazily constructs+caches its own instance independently -- see
+    those classes' own docstrings; sharing a single already-constructed
+    real F1CheXbert object across both is a future orchestrator-level
+    optimization, not implemented here)."""
     registry: Dict[str, GenerationMetricWrapper] = {
         "rouge_l": RougeLMetric(rouge_factory=rouge_factory),
         "bert_score": BertScoreMetric(config, bert_scorer_factory=bert_scorer_factory),
+        "f1radgraph": F1RadGraphMetric(config, f1radgraph_factory=f1radgraph_factory),
+        "f1chexbert": DatasetF1ChexbertMetric(config, f1chexbert_factory=f1chexbert_factory),
+        "f1chexbert_instance": InstanceF1ChexbertMetric(config, f1chexbert_factory=f1chexbert_factory),
     }
     if config.bleu_enabled:
         registry["bleu4"] = Bleu4Metric(bleu_factory=bleu_factory)

@@ -139,14 +139,21 @@ def test_module_never_imports_metric_libraries_at_module_scope():
     assert "bert_score" not in top_level_imports
 
 
-def test_rouge_evaluate_bert_score_are_not_installed_in_this_sandbox():
-    # Deliberate environment property this test suite relies on: it
-    # guarantees every other test in this file that omits an injected
-    # fake factory would fail loudly (missing_dependency), not silently
-    # pass by accident using a real installed library.
-    for module_name in ("rouge", "evaluate", "bert_score"):
-        with pytest.raises(ImportError):
-            __import__(module_name)
+# A prior version of this file asserted rouge/evaluate/bert_score are
+# not installed, as a belt-and-suspenders sandbox guarantee. Removed:
+# that is an environment property, not a property of this module's own
+# code -- it happened to hold in every sandbox tried so far, but a
+# Colab image that ships any of these preinstalled (plausible for a
+# transformers-adjacent environment) would fail this test for reasons
+# having nothing to do with this module's own correctness, exactly the
+# failure mode caught live for the analogous
+# test_radgraph_and_f1chexbert_are_not_installed_in_this_sandbox in
+# Cell 32's own test file. The real guarantee -- no test here
+# accidentally depends on a real library -- is already structural:
+# every test injects its own fake factory, and
+# test_module_never_imports_metric_libraries_at_module_scope (above)
+# statically verifies the module itself never imports any of them at
+# module scope, regardless of what happens to be installed.
 
 
 # ---------------------------------------------------------------------------
@@ -454,8 +461,13 @@ def test_mock_metric_name_defaults_and_is_settable():
 
 
 def test_build_metric_registry_default_includes_bleu4():
+    # Scoped to this cell's own 3 metrics: rouge_l/bleu4/bert_score must
+    # be present, whatever else the registry may also contain -- Cell 32
+    # (a later addition) legitimately expands this same registry with
+    # f1radgraph/f1chexbert/f1chexbert_instance, and asserts the exact
+    # full-registry shape itself, in its own test file.
     registry = build_metric_registry(GenerationMetricsConfig())
-    assert set(registry) == {"rouge_l", "bleu4", "bert_score"}
+    assert {"rouge_l", "bleu4", "bert_score"}.issubset(registry)
     assert isinstance(registry["rouge_l"], RougeLMetric)
     assert isinstance(registry["bleu4"], Bleu4Metric)
     assert isinstance(registry["bert_score"], BertScoreMetric)
@@ -463,8 +475,8 @@ def test_build_metric_registry_default_includes_bleu4():
 
 def test_build_metric_registry_excludes_bleu4_when_disabled():
     registry = build_metric_registry(GenerationMetricsConfig(bleu_enabled=False))
-    assert set(registry) == {"rouge_l", "bert_score"}
     assert "bleu4" not in registry
+    assert {"rouge_l", "bert_score"}.issubset(registry)
 
 
 def test_build_metric_registry_returns_independent_instances_across_calls():
@@ -491,8 +503,11 @@ def test_build_metric_registry_propagates_injected_factories_to_the_right_wrappe
 
 
 def test_build_mock_metric_registry_default_names_match_real_registry_shape():
+    # See test_build_metric_registry_default_includes_bleu4's own note:
+    # scoped to this cell's 3 metrics being present, not to the full
+    # registry's exact shape (Cell 32 legitimately adds more entries).
     mock_registry = build_mock_metric_registry()
-    assert set(mock_registry) == {"rouge_l", "bleu4", "bert_score"}
+    assert {"rouge_l", "bleu4", "bert_score"}.issubset(mock_registry)
     for name, wrapper in mock_registry.items():
         assert isinstance(wrapper, MockGenerationMetricWrapper)
         assert wrapper.name == name
