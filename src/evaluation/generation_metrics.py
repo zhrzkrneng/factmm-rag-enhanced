@@ -7,15 +7,33 @@ exact definitions used in the official FactMM-RAG evaluation script and
 the paper (see docs/paper_analysis.md §15 and
 docs/milestone_2_6_evaluation_contract.md).
 
-Cell 30 scope only: this module currently implements the config,
-input/output dataclasses, and the reference/prediction loader
-(query_key alignment, duplicate/missing-key validation, malformed-row
-handling, deterministic ordering, resume-safe load metadata) --
-everything §9.1/§11.1 of the contract needs before any metric can be
-computed. The five metric wrappers and the evaluate_generation()
-orchestrator that calls them (contract §8) are Cell 31 scope, not
-implemented here. No external metric library (radgraph, f1chexbert,
-rouge, evaluate, bert_score) is imported by this module.
+Cell 30 implemented the config, input/output dataclasses, and the
+reference/prediction loader (query_key alignment, duplicate/missing-key
+validation, malformed-row handling, deterministic ordering, resume-safe
+load metadata) -- everything §9.1/§11.1 of the contract needs before any
+metric can be computed.
+
+Cell 31 (this addition) implements three of the contract's §8 metric
+wrappers -- ROUGE-L, BLEU-4, BERTScore -- behind one uniform
+GenerationMetricWrapper interface, plus an explicit (never globally
+mutable) metric registry and deterministic mock wrappers for testing
+any future code that consumes the registry generically.
+F1RadGraph/F1CheXbert (contract §8's other two wrappers), the
+evaluate_generation() orchestrator that calls all five together,
+retrieval metrics, bootstrap significance, and Oracle evaluation are
+all explicitly out of scope here -- later cells. No external metric
+library (radgraph, f1chexbert) is imported by this module; rouge,
+evaluate, and bert_score ARE now real (lazy) dependencies of this
+module's default factories -- never imported at module scope, only
+inside a factory function invoked no earlier than a wrapper's first
+real compute() call, and never at all when a fake factory is injected
+(every unit test in this project injects fakes for these three; real
+invocation is reserved for a dedicated Colab dry-run cell, matching
+HFGeneratorAdapter's and RadGraphAnnotator's own established
+discipline). Added to requirements.txt in this same change: rouge,
+evaluate, bert-score (matching the precedent set when Pillow was added
+alongside HFGeneratorAdapter in Milestone 2.5) -- pytrec_eval remains
+deferred to its own future retrieval-metrics cell.
 
 Pairing is strict query_key-based by default
 (GenerationMetricsConfig.pairing_mode="by_query_key"): both reference
@@ -38,13 +56,14 @@ GenerationLoadSummary.failed_query_keys.
 
 from __future__ import annotations
 
+import abc
 import json
 import os
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Callable, Dict, List, Literal, Optional, Sequence, Tuple, Union
 
 from src.baseline.pair_mining.mining import QueryKey
 from src.common.exceptions import EvaluationError
@@ -588,3 +607,332 @@ def load_generation_pairs(
     if config.pairing_mode == "positional_official_reproduction":
         return _load_positional_official_reproduction(ref_path, pred_path, config)
     raise EvaluationError(f"Unknown pairing_mode {config.pairing_mode!r}")  # unreachable: config validates this
+
+
+# ---------------------------------------------------------------------------
+# Metric wrapper interface (Cell 31)
+# ---------------------------------------------------------------------------
+
+
+def _validate_hyps_refs(metric_name: str, hyps: Sequence[str], refs: Sequence[str]) -> None:
+    if len(hyps) != len(refs):
+        raise EvaluationError(
+            f"{metric_name}: hyps and refs must be the same length, got "
+            f"{len(hyps)} vs {len(refs)}"
+        )
+    if len(hyps) == 0:
+        raise EvaluationError(f"{metric_name}: cannot compute over zero examples")
+
+
+def _classify_metric_dependency_error(exc: Exception) -> Tuple[str, str]:
+    """Classifies exc into one of a fixed set of categories -- never a
+    single generic bucket. Same walk-the-__cause__-chain +
+    type-name-substring approach as
+    src.baseline.generation.adapter._classify_generation_error (contract
+    §14: "External library raises during a metric call -> EvaluationError,
+    chained"), adapted to the exception types rouge/evaluate/bert_score
+    (and their own huggingface_hub-based downloads, for BERTScore's
+    checkpoint) actually raise."""
+    seen = []
+    cur: Optional[BaseException] = exc
+    depth = 0
+    while cur is not None and depth < 6:
+        seen.append(cur)
+        cur = getattr(cur, "__cause__", None)
+        depth += 1
+
+    type_names = {type(e).__module__ + "." + type(e).__name__ for e in seen}
+    messages = " | ".join(str(e) for e in seen).lower()
+
+    def has_type(substr: str) -> bool:
+        return any(substr in name for name in type_names)
+
+    if isinstance(exc, (ImportError, ModuleNotFoundError)) or has_type("ImportError"):
+        return "missing_dependency", f"{type(exc).__name__}: {exc}"
+
+    if has_type("GatedRepoError") or has_type("LocalTokenNotFoundError"):
+        return "authentication_required", f"{type(exc).__name__}: {exc}"
+
+    if has_type("RepositoryNotFoundError") or has_type("RevisionNotFoundError"):
+        return "checkpoint_unavailable", f"{type(exc).__name__}: {exc}"
+
+    if (
+        has_type("ProxyError")
+        or has_type("ConnectError")
+        or has_type("ConnectTimeout")
+        or has_type("ConnectionError")
+        or has_type("TimeoutException")
+        or has_type("Timeout")
+        or "connection" in messages
+    ):
+        return "network_error", f"{type(exc).__name__}: {exc}"
+
+    if isinstance(exc, (ValueError, IndexError, KeyError)):
+        return "invalid_input", f"{type(exc).__name__}: {exc}"
+
+    return "computation_failed", f"{type(exc).__name__}: {exc}"
+
+
+@dataclass(frozen=True)
+class MetricComputation:
+    """The one uniform return shape every GenerationMetricWrapper.compute()
+    produces. per_example_scores is None only for metrics with no
+    per-example decomposition (BLEU-4 -- contract §7.6: the official
+    evaluate.load("bleu") API is corpus-level-only, no per-example
+    breakdown exists to report)."""
+
+    metric_name: str
+    corpus_score: float
+    per_example_scores: Optional[Tuple[float, ...]]
+
+
+class GenerationMetricWrapper(abc.ABC):
+    """One uniform API for every generation metric: compute(hyps, refs) ->
+    MetricComputation, nothing else. Per-metric configuration (which
+    checkpoint, which device, ...) is bound once at construction time,
+    never passed per-call -- so every concrete wrapper's compute()
+    signature is identical regardless of what it wraps.
+
+    No hidden global state: a wrapper instance's only mutable state is
+    its own lazily-constructed, instance-scoped library handle (never a
+    module-level shared object) -- see _LazyLibraryMixin.
+    """
+
+    name: str
+
+    @abc.abstractmethod
+    def compute(self, hyps: Sequence[str], refs: Sequence[str]) -> MetricComputation:
+        ...
+
+
+class _LazyLibraryMixin:
+    """Shared lazy-construction-and-cache behavior: the real (or
+    injected-fake) library object is never constructed until the first
+    real compute() call, and is cached on the instance (not a module
+    global) for reuse across subsequent calls -- matching official
+    evaluation.py's own single-construction-per-run pattern, and
+    HFGeneratorAdapter's established lazy-factory discipline."""
+
+    _factory: Callable[[], object]
+    _instance: Optional[object]
+
+    def _get_instance(self, *, metric_name: str) -> object:
+        if self._instance is None:
+            try:
+                self._instance = self._factory()
+            except Exception as exc:
+                if isinstance(exc, EvaluationError):
+                    raise
+                category, detail = _classify_metric_dependency_error(exc)
+                raise EvaluationError(
+                    f"{metric_name}: failed to construct dependency: {category}: {detail}"
+                ) from exc
+        return self._instance
+
+
+class RougeLMetric(_LazyLibraryMixin, GenerationMetricWrapper):
+    """Wraps the `rouge` PyPI package's Rouge().get_scores() (contract
+    §3.1, §4, §18 -- NOT Google's rouge-score / HF evaluate's built-in
+    "rouge", which compute ROUGE-L differently; never substituted).
+    get_scores(..., avg=False) is called once to obtain per-example
+    scores, and the corpus score is this project's own mean of those
+    per-example scores -- exactly what the library's own avg=True mode
+    does internally, so this avoids a second, redundant library call."""
+
+    name = "rouge_l"
+
+    def __init__(self, *, rouge_factory: Optional[Callable[[], object]] = None) -> None:
+        self._factory = rouge_factory or _default_rouge_factory
+        self._instance: Optional[object] = None
+
+    def compute(self, hyps: Sequence[str], refs: Sequence[str]) -> MetricComputation:
+        _validate_hyps_refs(self.name, hyps, refs)
+        rouge = self._get_instance(metric_name=self.name)
+        try:
+            per_example_raw = rouge.get_scores(list(hyps), list(refs), avg=False)
+            per_example_scores = tuple(item["rouge-l"]["f"] for item in per_example_raw)
+        except Exception as exc:
+            if isinstance(exc, EvaluationError):
+                raise
+            category, detail = _classify_metric_dependency_error(exc)
+            raise EvaluationError(f"{self.name}: {category}: {detail}") from exc
+        corpus_score = sum(per_example_scores) / len(per_example_scores)
+        return MetricComputation(
+            metric_name=self.name, corpus_score=corpus_score, per_example_scores=per_example_scores
+        )
+
+
+class Bleu4Metric(_LazyLibraryMixin, GenerationMetricWrapper):
+    """Wraps HuggingFace `evaluate.load("bleu")` (contract §3.1, §4).
+    Corpus-level only -- results['precisions'][3] is the 4-gram
+    precision component the official code reports as "BLEU-4", NOT the
+    geometric-mean BLEU score. No per-example decomposition exists in
+    this library's API (contract §7.6), so per_example_scores is always
+    None here -- never approximated or faked."""
+
+    name = "bleu4"
+
+    def __init__(self, *, bleu_factory: Optional[Callable[[], object]] = None) -> None:
+        self._factory = bleu_factory or _default_bleu_factory
+        self._instance: Optional[object] = None
+
+    def compute(self, hyps: Sequence[str], refs: Sequence[str]) -> MetricComputation:
+        _validate_hyps_refs(self.name, hyps, refs)
+        bleu = self._get_instance(metric_name=self.name)
+        try:
+            results = bleu.compute(predictions=list(hyps), references=[[r] for r in refs])
+            corpus_score = float(results["precisions"][3])
+        except Exception as exc:
+            if isinstance(exc, EvaluationError):
+                raise
+            category, detail = _classify_metric_dependency_error(exc)
+            raise EvaluationError(f"{self.name}: {category}: {detail}") from exc
+        return MetricComputation(metric_name=self.name, corpus_score=corpus_score, per_example_scores=None)
+
+
+class BertScoreMetric(_LazyLibraryMixin, GenerationMetricWrapper):
+    """Wraps `bert_score.BERTScorer` (contract §3.1, §4), constructed
+    from GenerationMetricsConfig's bert_score_* fields. device reuses
+    config.chexbert_device -- not a naming mistake: the official
+    evaluation.py passes one single shared `--device` CLI flag to BOTH
+    F1CheXbert and BERTScorer (contract §3.1); reusing the same config
+    field here is MORE faithful to that shared-device behavior than
+    introducing a second, independently-settable device field would be."""
+
+    name = "bert_score"
+
+    def __init__(
+        self,
+        config: GenerationMetricsConfig,
+        *,
+        bert_scorer_factory: Optional[Callable[[], object]] = None,
+    ) -> None:
+        self._config = config
+        self._factory = bert_scorer_factory or (lambda: _default_bert_scorer_factory(config))
+        self._instance: Optional[object] = None
+
+    def compute(self, hyps: Sequence[str], refs: Sequence[str]) -> MetricComputation:
+        _validate_hyps_refs(self.name, hyps, refs)
+        scorer = self._get_instance(metric_name=self.name)
+        try:
+            _, _, f = scorer.score(cands=list(hyps), refs=list(refs))
+            per_example_scores = tuple(float(x) for x in f.tolist())
+        except Exception as exc:
+            if isinstance(exc, EvaluationError):
+                raise
+            category, detail = _classify_metric_dependency_error(exc)
+            raise EvaluationError(f"{self.name}: {category}: {detail}") from exc
+        corpus_score = sum(per_example_scores) / len(per_example_scores)
+        return MetricComputation(
+            metric_name=self.name, corpus_score=corpus_score, per_example_scores=per_example_scores
+        )
+
+
+def _default_rouge_factory() -> object:
+    from rouge import Rouge  # lazy: only imported when actually constructing, never at module scope
+
+    return Rouge()
+
+
+def _default_bleu_factory() -> object:
+    import evaluate  # lazy: only imported when actually constructing, never at module scope
+
+    return evaluate.load("bleu")
+
+
+def _default_bert_scorer_factory(config: GenerationMetricsConfig) -> object:
+    from bert_score import BERTScorer  # lazy: only imported when actually constructing
+
+    return BERTScorer(
+        model_type=config.bert_score_model_type,
+        num_layers=config.bert_score_num_layers,
+        batch_size=config.bert_score_batch_size,
+        nthreads=4,
+        all_layers=False,
+        idf=False,
+        device=config.chexbert_device,
+        lang="en",
+        rescale_with_baseline=config.bert_score_rescale_with_baseline,
+        baseline_path=None,
+    )
+
+
+def _word_overlap_ratio(hyp: str, ref: str) -> float:
+    """Pure, deterministic Jaccard word overlap -- MockGenerationMetricWrapper's
+    scoring function. No randomness anywhere: same (hyp, ref) always
+    produces the exact same score, on any run, in any order."""
+    hyp_words = set(hyp.lower().split())
+    ref_words = set(ref.lower().split())
+    if not hyp_words or not ref_words:
+        return 0.0
+    return len(hyp_words & ref_words) / len(hyp_words | ref_words)
+
+
+class MockGenerationMetricWrapper(GenerationMetricWrapper):
+    """Deterministic, no-ML-dependency fake conforming to the exact same
+    GenerationMetricWrapper interface as the three real wrappers above --
+    for unit-testing any code that consumes a metric (or the registry)
+    generically, without invoking rouge/evaluate/bert_score at all.
+    Scores a pure word-overlap ratio (see _word_overlap_ratio); a custom
+    score_fn may be injected for tests that need specific, controlled
+    values instead."""
+
+    def __init__(
+        self,
+        name: str = "mock_metric",
+        *,
+        score_fn: Optional[Callable[[str, str], float]] = None,
+    ) -> None:
+        self.name = name
+        self._score_fn = score_fn or _word_overlap_ratio
+
+    def compute(self, hyps: Sequence[str], refs: Sequence[str]) -> MetricComputation:
+        _validate_hyps_refs(self.name, hyps, refs)
+        per_example_scores = tuple(self._score_fn(h, r) for h, r in zip(hyps, refs))
+        corpus_score = sum(per_example_scores) / len(per_example_scores)
+        return MetricComputation(
+            metric_name=self.name, corpus_score=corpus_score, per_example_scores=per_example_scores
+        )
+
+
+# ---------------------------------------------------------------------------
+# Metric registry -- explicit, freshly-constructed, never a shared
+# mutable module-level dict (no hidden global state: two calls return
+# fully independent wrapper instances with independent lazy-construction
+# caches).
+# ---------------------------------------------------------------------------
+
+_REGISTERED_METRIC_NAMES: Tuple[str, ...] = ("rouge_l", "bleu4", "bert_score")
+
+
+def build_metric_registry(
+    config: GenerationMetricsConfig,
+    *,
+    rouge_factory: Optional[Callable[[], object]] = None,
+    bleu_factory: Optional[Callable[[], object]] = None,
+    bert_scorer_factory: Optional[Callable[[], object]] = None,
+) -> Dict[str, GenerationMetricWrapper]:
+    """Builds the real (lazy) generation-metric registry for this cell's
+    scope: rouge_l and bert_score are always present; bleu4 is present
+    iff config.bleu_enabled (contract §7.1 -- bleu_enabled exists
+    precisely so BLEU-4's OFFICIAL_REPOSITORY-only, non-paper-reported
+    status, contract §2/§4/§18, can be turned off without touching call
+    sites). F1RadGraph/F1CheXbert are not registered here -- a later
+    cell's scope."""
+    registry: Dict[str, GenerationMetricWrapper] = {
+        "rouge_l": RougeLMetric(rouge_factory=rouge_factory),
+        "bert_score": BertScoreMetric(config, bert_scorer_factory=bert_scorer_factory),
+    }
+    if config.bleu_enabled:
+        registry["bleu4"] = Bleu4Metric(bleu_factory=bleu_factory)
+    return registry
+
+
+def build_mock_metric_registry(
+    names: Sequence[str] = _REGISTERED_METRIC_NAMES,
+) -> Dict[str, GenerationMetricWrapper]:
+    """Builds an all-mock registry with the same key shape as
+    build_metric_registry's default (bleu_enabled=True) output -- for
+    exercising any registry-consuming code (e.g. a future
+    evaluate_generation()) without any real metric library at all."""
+    return {name: MockGenerationMetricWrapper(name=name) for name in names}
