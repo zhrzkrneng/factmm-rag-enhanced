@@ -13,3 +13,4 @@ pytest
 rouge
 evaluate
 bert-score
+pytrec_eval
