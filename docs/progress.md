@@ -280,3 +280,14 @@ tracked in `docs/risk_register.md` and do not block moving to Milestone
 2.5 once approved. Milestone 2.5 (retrieval-augmented generator) has
 not been started and awaits explicit approval, per the project's
 per-milestone-approval workflow.
+
+
+## Milestone 2.8 -- IU X-Ray Scope Migration, Acquisition, and Pipeline Integration (Cells 40-46)
+
+**Status: Milestone 2.8 is ready to close.** IU X-Ray/Open-I replaces MIMIC-CXR/CheXpert as the primary executable benchmark (Cell 42 scope migration); MARVEL removed from required resources; Vicuna-7B-v1.5 deferred to a later generator stage. Official acquisition, deterministic canonicalization/split, loader, schema mapping, and retrieval/generation/prompt pipeline integration are all real-data-validated (Cells 43-45). This Cell 46 CPU-only end-to-end dry run exercises four labeled diagnostic arms (DATA_ONLY, MOCK_RETRIEVAL, ORACLE_PIPELINE_CHECK, MOCK_GENERATION_SMOKE) -- none of which is real retriever inference, real generation, or a scientific result.
+
+Readiness totals: {'READY': 16, 'PARTIALLY_READY': 4, 'DEFERRED': 10, 'REMOVED': 1, 'BLOCKED': 0}.
+
+This project does not claim exact FactMM-RAG reproduction, direct comparability to the paper's MIMIC-CXR/CheXpert scores, real retriever execution, real Vicuna/LLaVA generation, scientific performance from mock outputs, or a completed baseline result table. It does claim an architecture-faithful adaptation inspired by FactMM-RAG, official public IU X-Ray acquisition and deterministic preprocessing, a validated loader/schema/retrieval/generation/prompt pipeline, CPU-only end-to-end readiness, and readiness to implement the selected retriever and generator. Full detail: `results/reproduction/milestone_2_8/cell46_milestone_closure.json`.
+
+Remaining GPU/model work before a real baseline result exists: Selecting and implementing a replacement retriever (embedding model + FAISS index).; Acquiring and loading Vicuna-7B-v1.5 (or another selected generator backbone).; Real generator inference (LLaVA-style multimodal generation).; Empirical validation of F1RadGraph/F1CheXbert behavior on real IU X-Ray-derived generated text.; Building the first real baseline-vs-innovation result table..
