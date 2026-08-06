@@ -1,0 +1,76 @@
+{
+  "chexpert": {
+    "directory_exists": false,
+    "expected_directory": "data/chexpert",
+    "file_counts": "NOT_APPLICABLE",
+    "licensing_status": {
+      "automated_download_permitted": false,
+      "note": "Structural constraint, independent of current file presence -- this project's tooling must never attempt automated/shared access.",
+      "requirement": "Stanford AIMI Shared Datasets registration",
+      "status": "BLOCKED"
+    },
+    "manifest_consistency": "NOT_APPLICABLE",
+    "manifest_files": {
+      "test_manifest.json": {
+        "exists": false
+      },
+      "train_manifest.json": {
+        "exists": false
+      },
+      "valid_manifest.json": {
+        "exists": false
+      }
+    },
+    "overall_status": "MISSING",
+    "readiness_for_cell_39": "NOT_READY",
+    "required_files": {
+      "data/chexpert/test.json": {
+        "exists": false,
+        "record_count": null
+      }
+    },
+    "schema_compatibility": "NOT_APPLICABLE",
+    "split_consistency": "NOT_APPLICABLE"
+  },
+  "mimic_cxr": {
+    "directory_exists": false,
+    "expected_directory": "data/mimic",
+    "file_counts": "NOT_APPLICABLE",
+    "licensing_status": {
+      "automated_download_permitted": false,
+      "note": "Structural constraint, independent of current file presence -- this project's tooling must never attempt automated/shared access.",
+      "requirement": "PhysioNet credentialing (CITI training + signed Data Use Agreement)",
+      "status": "BLOCKED"
+    },
+    "manifest_consistency": "NOT_APPLICABLE",
+    "manifest_files": {
+      "test_manifest.json": {
+        "exists": false
+      },
+      "train_manifest.json": {
+        "exists": false
+      },
+      "valid_manifest.json": {
+        "exists": false
+      }
+    },
+    "overall_status": "MISSING",
+    "readiness_for_cell_39": "NOT_READY",
+    "required_files": {
+      "data/mimic/test.json": {
+        "exists": false,
+        "record_count": null
+      },
+      "data/mimic/train.json": {
+        "exists": false,
+        "record_count": null
+      },
+      "data/mimic/valid.json": {
+        "exists": false,
+        "record_count": null
+      }
+    },
+    "schema_compatibility": "NOT_APPLICABLE",
+    "split_consistency": "NOT_APPLICABLE"
+  }
+}

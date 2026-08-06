@@ -1,0 +1,67 @@
+{
+  "cuda": {
+    "note": "CPU-only runtime -- GPU-specific behavior unverified",
+    "status": "MISSING",
+    "torch_cuda_is_available": false
+  },
+  "packages": {
+    "bert_score": {
+      "installed": true,
+      "status": "AVAILABLE",
+      "version": "0.3.12"
+    },
+    "evaluate": {
+      "installed": true,
+      "status": "AVAILABLE",
+      "version": "0.4.6"
+    },
+    "f1chexbert": {
+      "installed": false,
+      "note": "ModuleNotFoundError: No module named 'f1chexbert'",
+      "status": "MISSING",
+      "version": null
+    },
+    "faiss": {
+      "installed": true,
+      "status": "AVAILABLE",
+      "version": "1.14.3"
+    },
+    "pytrec_eval": {
+      "installed": false,
+      "note": "ModuleNotFoundError: No module named 'pytrec_eval'",
+      "status": "MISSING",
+      "version": null
+    },
+    "radgraph": {
+      "installed": false,
+      "note": "ModuleNotFoundError: No module named 'radgraph'",
+      "status": "MISSING",
+      "version": null
+    },
+    "rouge": {
+      "installed": true,
+      "status": "AVAILABLE",
+      "version": "1.0.1"
+    },
+    "sentence_transformers": {
+      "installed": false,
+      "note": "ModuleNotFoundError: No module named 'sentence_transformers'",
+      "status": "MISSING",
+      "version": null
+    },
+    "torch": {
+      "installed": true,
+      "status": "AVAILABLE",
+      "version": "2.13.0+cu130"
+    },
+    "transformers": {
+      "installed": true,
+      "status": "AVAILABLE",
+      "version": "5.14.1"
+    }
+  },
+  "python_version": {
+    "status": "AVAILABLE",
+    "value": "3.11.15"
+  }
+}
