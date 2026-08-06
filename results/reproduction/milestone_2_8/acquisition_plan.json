@@ -1,0 +1,115 @@
+{
+  "built_from": "results/reproduction/milestone_2_8/resource_inventory.json (Cell 40, unmodified)",
+  "entries": {
+    "chexpert": {
+      "acquisition_method": "manual, credentialed download by the user from Stanford AIMI Shared Datasets (https://stanfordaimi.azurewebsites.net/datasets/8cbd9ed4-2eb9-4565-affc-111cf4f7ebe2); this project's tooling never automates this step",
+      "category": "B_credential_required",
+      "cell42_can_acquire_automatically": false,
+      "expected_storage_location": "data/chexpert/",
+      "manual_or_automatic": "manual",
+      "required_authentication": "Stanford AIMI account registration",
+      "resource_id": "chexpert",
+      "user_interaction_required": true,
+      "validation_procedure": "record-count match against Cell 37's paper-stated split sizes + IntegrityChecker/PatientSplitValidator (Milestone 2.1, reused unmodified)"
+    },
+    "clip_vit_b32_retriever": {
+      "acquisition_method": "Hugging Face Hub download (Hugging Face Hub), pinned to revision 3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268",
+      "category": "A_public_automatic",
+      "cell42_can_acquire_automatically": true,
+      "expected_storage_location": "~/.cache/huggingface/hub/models--openai--clip-vit-base-patch32/",
+      "manual_or_automatic": "automatic",
+      "required_authentication": "none (public repo, already confirmed reachable and loadable for real)",
+      "resource_id": "clip_vit_b32_retriever",
+      "user_interaction_required": false,
+      "validation_procedure": "transformers.AutoConfig.from_pretrained(local_files_only=True) pre-check (Cells 38/39's method, reused) + resolved-revision-hash match against the pinned value"
+    },
+    "llava_base_vicuna": {
+      "acquisition_method": "UNKNOWN -- cannot plan an acquisition method until the resource's identity and/or authentication requirement is resolved by further investigation",
+      "category": "C_ambiguous_unresolved",
+      "cell42_can_acquire_automatically": false,
+      "expected_storage_location": "UNKNOWN",
+      "manual_or_automatic": "UNKNOWN",
+      "required_authentication": "UNKNOWN",
+      "resource_id": "llava_base_vicuna",
+      "user_interaction_required": true,
+      "validation_procedure": "transformers.AutoConfig.from_pretrained(local_files_only=True) pre-check (Cells 38/39's method, reused) + resolved-revision-hash match against the pinned value"
+    },
+    "llava_fork_haotian_liu": {
+      "acquisition_method": "git clone (https://github.com/haotian-liu/LLaVA.git) at pinned commit c121f0432da27facab705978f83c4ada465e46fd",
+      "category": "A_public_automatic",
+      "cell42_can_acquire_automatically": true,
+      "expected_storage_location": "FactMM-RAG/LLaVA/ (per install_llava.sh's own cd sequence)",
+      "manual_or_automatic": "automatic",
+      "required_authentication": "none (public GitHub repo)",
+      "resource_id": "llava_fork_haotian_liu",
+      "user_interaction_required": false,
+      "validation_procedure": "git commit hash match against the pinned value, post-clone"
+    },
+    "llava_generator_vision_tower_clip_l14": {
+      "acquisition_method": "UNKNOWN -- cannot plan an acquisition method until the resource's identity and/or authentication requirement is resolved by further investigation",
+      "category": "C_ambiguous_unresolved",
+      "cell42_can_acquire_automatically": false,
+      "expected_storage_location": "UNKNOWN",
+      "manual_or_automatic": "UNKNOWN",
+      "required_authentication": "UNKNOWN",
+      "resource_id": "llava_generator_vision_tower_clip_l14",
+      "user_interaction_required": true,
+      "validation_procedure": "transformers.AutoConfig.from_pretrained(local_files_only=True) pre-check (Cells 38/39's method, reused) + resolved-revision-hash match against the pinned value"
+    },
+    "llava_mm_projector_checkpoint": {
+      "acquisition_method": "UNKNOWN -- cannot plan an acquisition method until the resource's identity and/or authentication requirement is resolved by further investigation",
+      "category": "C_ambiguous_unresolved",
+      "cell42_can_acquire_automatically": false,
+      "expected_storage_location": "UNKNOWN",
+      "manual_or_automatic": "UNKNOWN",
+      "required_authentication": "UNKNOWN",
+      "resource_id": "llava_mm_projector_checkpoint",
+      "user_interaction_required": true,
+      "validation_procedure": "transformers.AutoConfig.from_pretrained(local_files_only=True) pre-check (Cells 38/39's method, reused) + resolved-revision-hash match against the pinned value"
+    },
+    "marvel_warm_start_checkpoint": {
+      "acquisition_method": "Hugging Face Hub download (Hugging Face Hub), pinned to revision 19bd4191e36a285ffa13cad901c670cd785a4aec",
+      "category": "A_public_automatic",
+      "cell42_can_acquire_automatically": true,
+      "expected_storage_location": "~/.cache/huggingface/hub/models--OpenMatch--marvel-ance-clueweb/ (or a project-local path mirroring the official repo's ./src/checkpoint/ convention if loaded via --pretrained_model_path)",
+      "manual_or_automatic": "automatic",
+      "required_authentication": "none known (public repo)",
+      "resource_id": "marvel_warm_start_checkpoint",
+      "user_interaction_required": false,
+      "validation_procedure": "transformers.AutoConfig.from_pretrained(local_files_only=True) pre-check (Cells 38/39's method, reused) + resolved-revision-hash match against the pinned value"
+    },
+    "mimic_cxr": {
+      "acquisition_method": "manual, credentialed download by the user from PhysioNet, processed per Delbrouck et al. 2023 (vilmedic ACL-2023 RadSum23 split) (https://vilmedic.app/papers/acl2023/); this project's tooling never automates this step",
+      "category": "B_credential_required",
+      "cell42_can_acquire_automatically": false,
+      "expected_storage_location": "data/mimic/",
+      "manual_or_automatic": "manual",
+      "required_authentication": "PhysioNet account + CITI training + signed Data Use Agreement",
+      "resource_id": "mimic_cxr",
+      "user_interaction_required": true,
+      "validation_procedure": "record-count match against Cell 37's paper-stated split sizes + IntegrityChecker/PatientSplitValidator (Milestone 2.1, reused unmodified)"
+    },
+    "t5_ance": {
+      "acquisition_method": "Hugging Face Hub download (Hugging Face Hub), pinned to revision bf70ee32b49c3e8c1d40982feebbc3b9930eeab4",
+      "category": "A_public_automatic",
+      "cell42_can_acquire_automatically": true,
+      "expected_storage_location": "~/.cache/huggingface/hub/models--OpenMatch--t5-ance/",
+      "manual_or_automatic": "automatic",
+      "required_authentication": "none (public repo, already confirmed reachable and loadable for real)",
+      "resource_id": "t5_ance",
+      "user_interaction_required": false,
+      "validation_procedure": "transformers.AutoConfig.from_pretrained(local_files_only=True) pre-check (Cells 38/39's method, reused) + resolved-revision-hash match against the pinned value"
+    },
+    "unlabeled_rag_section_checkpoint": {
+      "acquisition_method": "UNKNOWN -- cannot plan an acquisition method until the resource's identity and/or authentication requirement is resolved by further investigation",
+      "category": "C_ambiguous_unresolved",
+      "cell42_can_acquire_automatically": false,
+      "expected_storage_location": "UNKNOWN",
+      "manual_or_automatic": "UNKNOWN",
+      "required_authentication": "UNKNOWN",
+      "resource_id": "unlabeled_rag_section_checkpoint",
+      "user_interaction_required": true,
+      "validation_procedure": "transformers.AutoConfig.from_pretrained(local_files_only=True) pre-check (Cells 38/39's method, reused) + resolved-revision-hash match against the pinned value"
+    }
+  }
+}

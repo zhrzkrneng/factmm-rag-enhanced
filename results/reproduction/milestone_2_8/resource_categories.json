@@ -1,0 +1,47 @@
+{
+  "categories": {
+    "A_public_automatic": {
+      "label": "Public / Automatically downloadable",
+      "resources": [
+        "clip_vit_b32_retriever",
+        "llava_fork_haotian_liu",
+        "marvel_warm_start_checkpoint",
+        "t5_ance"
+      ]
+    },
+    "B_credential_required": {
+      "label": "Credential required",
+      "resources": [
+        "chexpert",
+        "mimic_cxr"
+      ]
+    },
+    "C_ambiguous_unresolved": {
+      "label": "Ambiguous or unresolved",
+      "resources": [
+        "llava_base_vicuna",
+        "llava_generator_vision_tower_clip_l14",
+        "llava_mm_projector_checkpoint",
+        "unlabeled_rag_section_checkpoint"
+      ]
+    }
+  },
+  "counts": {
+    "category_a_public_automatic": 4,
+    "category_b_credential_required": 2,
+    "category_c_ambiguous_unresolved": 4,
+    "total": 10
+  },
+  "resource_to_category": {
+    "chexpert": "B_credential_required",
+    "clip_vit_b32_retriever": "A_public_automatic",
+    "llava_base_vicuna": "C_ambiguous_unresolved",
+    "llava_fork_haotian_liu": "A_public_automatic",
+    "llava_generator_vision_tower_clip_l14": "C_ambiguous_unresolved",
+    "llava_mm_projector_checkpoint": "C_ambiguous_unresolved",
+    "marvel_warm_start_checkpoint": "A_public_automatic",
+    "mimic_cxr": "B_credential_required",
+    "t5_ance": "A_public_automatic",
+    "unlabeled_rag_section_checkpoint": "C_ambiguous_unresolved"
+  }
+}
