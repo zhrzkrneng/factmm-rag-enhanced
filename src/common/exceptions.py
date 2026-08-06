@@ -94,3 +94,31 @@ class RetrieverTrainingError(Exception):
     field, or an embedding-dimension mismatch between a query and
     candidate encoding -- never silently skipped, retried, or trusted.
     """
+
+
+class RAGDatasetError(Exception):
+    """Raised when the RAG dataset builder's own schema/config checks
+    fail: a query/corpus record missing a configured rag_data_mode/
+    output_data_mode/image_path field, a KNN ranking referencing a
+    candidate key missing from the corpus or violating the
+    cross-dataset invariant, a malformed or duplicate-keyed existing
+    output line, or an existing output/metadata produced under an
+    incompatible RAGDatasetBuilderConfig -- never silently dropped or
+    treated as an empty resume.
+    """
+
+
+class EvaluationError(Exception):
+    """Raised when the evaluation subsystem's own schema/config checks
+    fail: a malformed or duplicate-keyed reference/prediction JSONL
+    line, a prediction whose query_key has no matching reference (or a
+    reference with no matching prediction row), a prediction with
+    neither a generated result nor an error (or both), a blank/malformed
+    hypothesis text under the strict default pairing mode, a
+    ref/prediction row count mismatch under positional-pairing
+    reproduction mode, or a config/library-provenance mismatch in
+    resume-safe metadata -- never silently dropped, coerced, or treated
+    as a zero score. Real exceptions raised by an external metric
+    library (radgraph/f1chexbert/rouge/evaluate/bert_score/pytrec_eval)
+    are wrapped and chained here rather than swallowed.
+    """

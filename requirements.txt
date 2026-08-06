@@ -1,6 +1,7 @@
 torch
 torchvision
 transformers
+Pillow
 datasets
 pandas
 numpy
@@ -9,3 +10,7 @@ faiss-cpu
 pyyaml
 tqdm
 pytest
+rouge
+evaluate
+bert-score
+pytrec_eval
