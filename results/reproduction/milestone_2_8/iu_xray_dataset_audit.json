@@ -1,0 +1,104 @@
+{
+  "access_license_conditions": {
+    "source_detail": "Not corroborated by a direct fetch of any official terms-of-use page (all such attempts 403'd). Exact, citable license text: UNKNOWN.",
+    "source_type": "WEBSEARCH_SNIPPET",
+    "value": "No single authoritative license text was confirmed this session. Search-snippet synthesis states the underlying source collections are de-identified, open-access clinical collections usable for non-commercial academic purposes without IRB oversight, used under their respective source collections' open-access/CC terms. Separately, a third-party Hugging Face mirror (ykumards/open-i) is reported to carry a CC BY-NC-ND 4.0 label -- this applies to that specific mirror, not confirmed as the official NLM license."
+  },
+  "available_report_sections": {
+    "source_detail": "GitHub Awesome-Medical-Dataset page (full page read): \"Comparison section contains prior patient information\", \"Indication section details symptoms\", \"Findings section lists radiological observations\", \"Impression section outlines the final diagnosis.\" Corroborated by WebSearch snippets independently.",
+    "source_type": "WEBFETCH_PAGE_READ",
+    "value": [
+      "Comparison",
+      "Indication",
+      "Findings",
+      "Impression"
+    ]
+  },
+  "compatibility_gaps_with_current_baseline_schemas": {
+    "source_detail": "src/data/schema.py, src/data/parsing.py, and reference/original_repository/FactMM-RAG/data/parse.py were all read directly this session to produce this list.",
+    "source_type": "VERIFIED_BASELINE",
+    "value": [
+      "src/data/schema.py's ReportRecord models exactly two report text fields (finding, impression) plus image_paths, patient_id, study_id, dataset -- IU X-Ray's Comparison and Indication sections have no corresponding field today.",
+      "src/data/parsing.py's _ID_PATTERNS dict hard-codes exactly two dataset-specific regexes for extracting (patient_id, study_id) from image paths -- 'mimic-cxr': /(p\\d+)/(s\\d+)/ and 'chexpert': /(patient\\d+)/(study\\d+)/. Neither pattern will match IU X-Ray's file/directory layout (which was not itself confirmed this session -- UNKNOWN); IU X-Ray is not present in this dict at all, so a new entry (or a different extraction mechanism) would be required before this project's existing parser could ingest IU X-Ray.",
+      "The official FactMM-RAG data/parse.py (reference/original_repository/FactMM-RAG/data/parse.py) expects three separate line-oriented input files (image paths, findings, impressions) with one line per image, aligned by line number -- IU X-Ray's native distribution (per-report XML or the Kaggle CSV pair) does not match this line-oriented convention and would need a new conversion step, not yet written by this project."
+    ]
+  },
+  "differences_from_mimic_cxr_chexpert": {
+    "source_detail": "The MIMIC-CXR/CheXpert-side figures cited for comparison are drawn from this project's own already-committed Cell 37/40 artifacts (OFFICIAL_REPOSITORY/PAPER_EXPLICIT sourced there, not re-derived here), not re-fetched this session.",
+    "source_type": "WEBSEARCH_SNIPPET",
+    "value": [
+      "Scale: 7,470 images / 3,955 reports (IU X-Ray) vs. this project's own recorded MIMIC-CXR figures of 125,417 train / 991 valid / 1,624 test image-report pairs (Cell 37, PAPER_EXPLICIT) -- roughly two orders of magnitude smaller.",
+      "Report schema: four sections (Comparison, Indication, Findings, Impression) vs. this project's MIMIC-CXR/CheXpert baseline schema, which models exactly two sections (finding, impression) -- see compatibility_gaps below.",
+      "Access: IU X-Ray sources read/searched this session describe no PhysioNet-style credentialed Data Use Agreement, unlike MIMIC-CXR's confirmed PhysioNet account + CITI training + signed DUA requirement (resource_inventory.json, Cell 40) and CheXpert's Stanford AIMI account registration requirement (same file).",
+      "No CheXpert-labeler-style bundled structured image labels were found described for IU X-Ray by any source read this session -- UNKNOWN whether any official or de-facto-standard CheXbert/RadGraph-style label set exists for it."
+    ]
+  },
+  "expected_download_size": {
+    "source_detail": "14GB figure from the GitHub Awesome-Medical-Dataset page (full page read this session), describing the Kaggle-derived mirror specifically -- not confirmed for the official NLM tgz archives, which were never successfully fetched.",
+    "source_type": "WEBFETCH_PAGE_READ",
+    "value": "Kaggle mirror (PNG images + CSV metadata): approximately 14GB total. Official NLM NLMCXR_png.tgz / NLMCXR_reports.tgz archive sizes: UNKNOWN."
+  },
+  "image_count": {
+    "source_detail": "GitHub Awesome-Medical-Dataset page (full page read), corroborated independently by all four WebSearch queries this session.",
+    "source_type": "WEBFETCH_PAGE_READ",
+    "value": 7470
+  },
+  "image_formats": {
+    "source_detail": "DICOM/PNG conversion detail from the GitHub Awesome-Medical-Dataset page (full page read); the official-archive filename detail is WEBSEARCH_SNIPPET only.",
+    "source_type": "WEBFETCH_PAGE_READ",
+    "value": "Kaggle/community mirror: PNG, converted from original DICOM (top/bottom 0.5% of DICOM pixel values clipped, linearly scaled to 0-255, shorter side resized to 2048px). Official NLM archive filename (NLMCXR_png.tgz, per WEBSEARCH_SNIPPET) implies PNG is also the format of the official distribution, but this was not independently confirmed by a direct fetch. Original source modality: DICOM."
+  },
+  "image_to_report_relationship": {
+    "source_detail": "The <parentImage> XML tag detail comes from a WebSearch synthesis referencing community loader scripts (omar-mohamed/X-Ray-Report-Generation's get_iu_xray.py), not a direct fetch of that script this session.",
+    "source_type": "WEBSEARCH_SNIPPET",
+    "value": "Many-to-one and variable: a single report may have more than one associated image (e.g. frontal + lateral views). The official NLM XML report format identifies associated images via a <parentImage id=\"image-id\"> tag per search-snippet evidence. Exact per-report min/max image counts: UNKNOWN. Average is approximately 1.89 images per report, computed here as 7470 / 3955 -- a derived arithmetic figure, not a dataset-stated statistic."
+  },
+  "known_public_splits": {
+    "source_detail": "Split counts table from the GitHub Awesome-Medical-Dataset page (full page read). The \"70/10/20, Li et al. 2018 origin, R2Gen-adopted\" characterization is WEBSEARCH_SNIPPET only -- Li et al. 2018 itself was not fetched/read this session. This is NOT an official NLM-sanctioned split; it is a community convention.",
+    "source_type": "WEBFETCH_PAGE_READ",
+    "value": "No official NLM-published train/val/test split was found. A de facto community-standard split (70%/10%/20%, patient-level) originating from Li et al. 2018 is widely reused across the literature, including R2Gen and its variants (e.g. R2Gen-Mamba). One community reproduction (the GitHub Awesome-Medical-Dataset page) reports concrete counts: train 5,226 images / 2,770 reports; validation 748 images / 395 reports; test 1,496 images / 790 reports."
+  },
+  "metadata_format": {
+    "source_detail": "CSV filenames from the GitHub Awesome-Medical-Dataset page (full page read); XML/<parentImage> detail from WebSearch snippet only (not independently fetched).",
+    "source_type": "WEBFETCH_PAGE_READ",
+    "value": "Two distinct distributions observed: (1) official NLM NLMCXR_reports.tgz uses per-report XML files with a <parentImage id=\"...\"> tag linking images to reports (WEBSEARCH_SNIPPET); (2) the Kaggle/community mirror instead provides two flat CSV files, indiana_projections.csv and indiana_reports.csv (WEBFETCH_PAGE_READ). These are two different repackagings of the same underlying data, not two conflicting facts about one format."
+  },
+  "official_dataset_name": {
+    "source_detail": "Consistent across all four WebSearch queries this session; the underlying publication (Demner-Fushman et al., \"Preparing a collection of radiology examinations for distribution and retrieval\", cited as PubMed ID 26133894) was identified via search snippet and via the WEBFETCH_PAGE_READ GitHub page's own citation, but the paper itself was not fetched/read this session.",
+    "source_type": "WEBSEARCH_SNIPPET",
+    "value": "Indiana University Chest X-Ray Collection (\"IU X-Ray\"), distributed via the National Library of Medicine's Open-i (Open Access Biomedical Image Search Engine) service -- commonly referred to as \"Open-I\" or \"IU X-Ray\" interchangeably in the literature."
+  },
+  "official_source_url": {
+    "source_detail": "openi.nlm.nih.gov itself returned HTTP 403 on two direct WebFetch attempts this session (homepage and /faq) -- these exact URLs were NOT verified by loading them; they are recorded as reported by search-engine snippets only. Kaggle mirror (https://www.kaggle.com/datasets/raddar/chest-xrays-indiana-university) and an Academic Torrents mirror (https://academictorrents.com/details/66450ba52ba3f83fbf82ef9c91f2bde0e845aba9) also both returned HTTP 403 on WebFetch this session.",
+    "source_type": "WEBSEARCH_SNIPPET",
+    "value": "https://openi.nlm.nih.gov/ (NLM Open-i service). Direct archive URLs surfaced by search: https://openi.nlm.nih.gov/imgs/collections/NLMCXR_png.tgz (images) and https://openi.nlm.nih.gov/imgs/collections/NLMCXR_reports.tgz (XML reports)."
+  },
+  "registration_requirement_kaggle_mirror": {
+    "source_detail": "The Kaggle dataset page itself returned HTTP 403 on WebFetch this session and could not be read directly; this is inferred from general knowledge of how the Kaggle platform works, not from a page read this session -- flagged accordingly, not presented as dataset-specific confirmed fact.",
+    "source_type": "REASONABLE_INFERENCE",
+    "value": "A free Kaggle account is required to download any Kaggle dataset, per the Kaggle platform's general, publicly documented behavior (not specific to this dataset)."
+  },
+  "registration_requirement_official_nlm": {
+    "source_detail": "No source read or searched this session states whether openi.nlm.nih.gov requires registration/an account to download NLMCXR_png.tgz / NLMCXR_reports.tgz directly. Not invented.",
+    "source_type": "UNKNOWN",
+    "value": "UNKNOWN"
+  },
+  "report_count": {
+    "source_detail": "GitHub Awesome-Medical-Dataset page (full page read), corroborated independently by all four WebSearch queries this session.",
+    "source_type": "WEBFETCH_PAGE_READ",
+    "value": 3955
+  },
+  "research_method": "WebSearch + WebFetch performed this session (live web research), not general pretrained knowledge. See module docstring for the exact URLs/queries attempted and their outcomes.",
+  "source_type_legend": {
+    "REASONABLE_INFERENCE": "Not directly stated by any source read this session; a defensible inference, explicitly labeled as such.",
+    "UNKNOWN": "Not confirmed by any source read this session. Per instruction, never invented.",
+    "VERIFIED_BASELINE": "Read directly from this project's own source tree this session (used for compatibility-gap claims only).",
+    "WEBFETCH_PAGE_READ": "A full page was fetched and read by this cell's research process this session (strongest evidence available for this cell; still a secondary/community source, not the official NLM page itself, which returned HTTP 403 on every fetch attempt).",
+    "WEBSEARCH_SNIPPET": "Only a search-engine result synthesis was available this session, not a full page read. Weaker evidence than WEBFETCH_PAGE_READ -- corroborated across multiple independent search queries where noted, but not verified against a directly-read primary page."
+  },
+  "suitability_for_radiology_report_generation": {
+    "source_detail": "Inferred from the volume and consistency of report-generation papers surfaced by WebSearch that use this dataset, not from a single source stating suitability as an explicit claim.",
+    "source_type": "REASONABLE_INFERENCE",
+    "value": "Widely used in the report-generation literature -- WebSearch this session surfaced multiple report-generation papers using IU X-Ray (e.g. R2Gen-Mamba, LLaMA-XR, XrayGPT, Cross-modal Memory Networks for Radiology Report Generation), consistent with it being a standard lightweight benchmark for this task."
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "explicit_non_actions_this_cell": [
+    "IU X-Ray was not downloaded.",
+    "Vicuna-7B-v1.5 was not downloaded or loaded; no HF token was requested or stored.",
+    "MARVEL was not downloaded or used.",
+    "No replacement retriever was chosen or implemented.",
+    "No file under src/ or tests/ was modified.",
+    "No existing contract or prior Milestone 2.7/2.8 artifact was edited -- only listed above as needing later reinterpretation.",
+    "No inference or training was started. Cell 43 was not started."
+  ],
+  "migration_impact_list": [
+    {
+      "artifact": "docs/milestone_2_7_reproduction_validation_contract.md",
+      "why_affected": "Its reproduction targets (paper Table 2 values, MIMIC-CXR/CheXpert retrieval-only + backbone-variation settings) are all PAPER_EXPLICIT figures for a dataset this project no longer executes against as primary. Will need a note that these targets are retained only as historical paper-reference figures, not reproduction goals under the new scope."
+    },
+    {
+      "artifact": "docs/milestone_2_8_resource_acquisition_contract.md",
+      "why_affected": "Per-resource acquisition instructions for MIMIC-CXR, CheXpert, and the MARVEL warm-start checkpoint are superseded by this migration's reclassification (DEFERRED_NOT_REQUIRED / REMOVED_FROM_REQUIRED_RESOURCES)."
+    },
+    {
+      "artifact": "results/reproduction/milestone_2_7/ (Cell 37/38/39 outputs: paper_values.json, reproduction_config.json, dataset_requirements.json, checkpoint_requirements.json, audit_summary.md, runtime_validation.json, dataset_validation.json, checkpoint_validation.json, readiness_report.md, blocker_status.json, cell39_readiness.md)",
+      "why_affected": "All built around the now-superseded MIMIC-CXR/CheXpert/MARVEL primary-dataset assumption; remain accurate as historical records of the paper-reproduction investigation but no longer describe this project's current execution plan."
+    },
+    {
+      "artifact": "results/reproduction/milestone_2_8/ (Cell 40/41 outputs: resource_inventory.json, resource_matrix.json, resource_discovery_report.md, download_plan.md, resource_categories.json, acquisition_plan.json, manual_steps.md, cell41_summary.md)",
+      "why_affected": "Cell 40's 10-resource inventory and Cell 41's Category A/B/C classification both need reconciling against this cell's new reclassification -- most notably marvel_warm_start_checkpoint, which Cell 41 placed in Category A (public/automatic) but this migration removes from required resources entirely."
+    },
+    {
+      "artifact": "Phase 3 innovation contract (not yet located/read this session -- named per this cell's Task 4 requirement; its exact path was not confirmed this session)",
+      "why_affected": "Any innovation description that assumes MIMIC-CXR/CheXpert scale or the MARVEL warm-start checkpoint as a starting point needs updating for the smaller IU X-Ray scale and the not-yet-chosen replacement retriever."
+    },
+    {
+      "artifact": "Innovation roadmap (not yet located/read this session -- named per this cell's Task 4 requirement)",
+      "why_affected": "Same reasoning as the Phase 3 innovation contract -- any dataset- or retriever-specific milestones need reinterpretation under the new scope."
+    },
+    {
+      "artifact": "Comparison-table wording (wherever paper-vs-reproduction results tables are presented, e.g. in future milestone reports)",
+      "why_affected": "Must be reworded to never present IU X-Ray scores next to the paper's MIMIC-CXR/CheXpert scores as if directly comparable (Task 5's explicit prohibition)."
+    },
+    {
+      "artifact": "Acceptance criteria (wherever this project's own 'reproduction succeeded' criteria are defined)",
+      "why_affected": "Criteria phrased in terms of matching paper MIMIC-CXR/CheXpert numbers no longer apply; need reframing around the new claim (architecture-faithful adaptation + controlled baseline-vs-innovation comparison on IU X-Ray)."
+    },
+    {
+      "artifact": "Branch/tag strategy",
+      "why_affected": "The branch name reproduction/milestone-2.7 and any future tags describing this work as a 'reproduction' may need reconsideration given the new claim explicitly disclaims exact reproduction; a naming decision is deferred, not made here."
+    }
+  ],
+  "new_claims": [
+    "An architecture-faithful baseline adaptation inspired by FactMM-RAG (same retrieval-augmented generation architecture family; same evaluation-metric machinery already built in src/evaluation/), run on a different, lightweight public benchmark.",
+    "Evaluation on IU X-Ray / Open-I, a lightweight public radiology report-generation benchmark, in place of MIMIC-CXR/CheXpert.",
+    "A controlled baseline-vs-innovation comparison on the identical IU X-Ray split (adapted baseline vs. Innovation 1 vs. cumulative innovations), which remains scientifically meaningful even though it is no longer comparable to the paper's own MIMIC-CXR/CheXpert numbers."
+  ],
+  "old_claim_removed": "This project no longer claims exact reproduction of the FactMM-RAG paper's reported results, and no longer claims direct numerical comparability with the paper's MIMIC-CXR/CheXpert results tables (the ones already extracted, PAPER_EXPLICIT-labeled, in docs/milestone_2_7_reproduction_validation_contract.md).",
+  "resource_reclassification": {
+    "chexpert": {
+      "new_status": "DEFERRED_NOT_REQUIRED",
+      "rationale": "Same reasoning as mimic_cxr -- was zero-shot-evaluation-only even under the old scope (PAPER_EXPLICIT, Cell 37); not required under the new scope either."
+    },
+    "clip_vit_b32_retriever": {
+      "new_status": "REASSESS_UNDER_ADAPTED_ARCHITECTURE_NO_AUTO_DOWNLOAD",
+      "rationale": "Retriever-side CLIP resource -- reassessed once a replacement retriever is chosen; not downloaded automatically by this cell."
+    },
+    "llava_base_vicuna": {
+      "new_status": "DEFERRED_TO_GENERATOR_STAGE",
+      "rationale": "Vicuna-7B-v1.5 remains the intended generator backbone for now, but must not be downloaded, loaded, or have any HF token requested/stored in this cell -- deferred entirely to a later generator stage."
+    },
+    "llava_fork_haotian_liu": {
+      "new_status": "RETAIN_ONLY_IF_REQUIRED_BY_GENERATOR_ARCHITECTURE",
+      "rationale": "Retained only if required by whatever generator architecture is ultimately used with Vicuna-7B-v1.5; not cloned, installed, or otherwise acted on in this cell."
+    },
+    "llava_generator_vision_tower_clip_l14": {
+      "new_status": "RETAIN_ONLY_IF_REQUIRED_BY_GENERATOR_ARCHITECTURE",
+      "rationale": "Part of the LLaVA generator stage's own vision tower; same conditional-retention logic as the LLaVA fork -- reassessed only once the generator architecture is decided."
+    },
+    "llava_mm_projector_checkpoint": {
+      "new_status": "REASSESS_UNDER_ADAPTED_ARCHITECTURE_NO_AUTO_DOWNLOAD",
+      "rationale": "The ambiguous Google-Drive-linked MM projector resource explicitly named in this cell's Task 3 -- reassessed under whatever adapted architecture is chosen later; not downloaded automatically."
+    },
+    "marvel_warm_start_checkpoint": {
+      "new_status": "REMOVED_FROM_REQUIRED_RESOURCES",
+      "rationale": "Explicitly removed per this cell's instructions. A replacement modern retriever will be chosen later, under a separate explicit decision -- not selected or implemented in this cell."
+    },
+    "mimic_cxr": {
+      "new_status": "DEFERRED_NOT_REQUIRED",
+      "rationale": "Primary dataset role replaced by IU X-Ray. Not required for the adapted baseline; may become relevant again only if a later, separately-authorized decision reintroduces cross-dataset generalization experiments."
+    },
+    "t5_ance": {
+      "new_status": "REASSESS_UNDER_ADAPTED_ARCHITECTURE_NO_AUTO_DOWNLOAD",
+      "rationale": "Retriever-side T5-ANCE resource -- same reassessment logic as clip_vit_b32_retriever."
+    },
+    "unlabeled_rag_section_checkpoint": {
+      "new_status": "REASSESS_UNDER_ADAPTED_ARCHITECTURE_NO_AUTO_DOWNLOAD",
+      "rationale": "The other ambiguous Google-Drive-linked resource (Cell 40's unlabeled_rag_section_checkpoint) -- identity still UNKNOWN from Cell 40; reassessed later, not downloaded automatically."
+    }
+  }
+}
