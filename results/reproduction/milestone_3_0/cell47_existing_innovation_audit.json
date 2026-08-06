@@ -1,0 +1,34 @@
+{
+  "docs/innovation_proposals.md": {
+    "classification": "REUSED_AS_HISTORICAL_CONTEXT",
+    "rationale": "Original A-F innovation proposal document, read for context. Not modified (Cell 47's Document Update Policy: historical docs are not rewritten). I1/I2/I3 supersede/narrow A/B/(C+D) respectively for Milestone 3.0's actual scope; this supersession is recorded only in this cell's own new artifacts, never by editing the historical document."
+  },
+  "docs/phase_3_innovation_contract.md": {
+    "classification": "REUSED_AS_HISTORICAL_CONTEXT",
+    "rationale": "Earlier, more elaborate 6-innovation design contract (pre-dates the Milestone 2.8 IU X-Ray pivot). Its Section 13 baseline/innovation import rule (one-directional: innovation may import baseline, never the reverse) is the rule this cell actually follows -- see design caveats in cell47_report.md for why, over the narrower claim in src/innovation/__init__.py's own docstring."
+  },
+  "src/innovation/adaptive_retrieval/adaptive_k.py": {
+    "classification": "EXTEND",
+    "rationale": "Pre-existing stub (docstring only, 'No implementation yet') at exactly I1's intended location. Extended with AdaptiveKConfig (validated) and AdaptiveKDecision -- the contract Section 3 asks for. The selection algorithm itself is deferred to Cell 48 per Section 10."
+  },
+  "src/innovation/confidence_gating/gate.py": {
+    "classification": "UNUSED",
+    "rationale": "Pre-existing stub for the ORIGINAL, broader Innovation D scope (docs/innovation_proposals.md: 'a gate deciding whether to retrieve at all'). Milestone 3.0's I3 ('Confidence-Gated Multi-Report Fusion') is a narrower, different decision (should_fuse over already-retrieved evidence, not retrieve-vs-not-retrieve) -- fully expressed instead as FusionDecision in multi_report_fusion/fusion.py, per that module's own docstring note. gate.py is left completely untouched (not one of the three required innovations for this cell) rather than rewritten or deleted, per Section 1's explicit instruction."
+  },
+  "src/innovation/evaluation/innovation_metrics.py": {
+    "classification": "EXTEND",
+    "rationale": "Pre-existing stub. Extended with the Section 8 metrics contract, reusing (never reimplementing) the real metric names from src.evaluation.retrieval_metrics/generation_metrics's own registries, plus the innovation-specific diagnostic-name registry."
+  },
+  "src/innovation/factual_reranking/reranker.py": {
+    "classification": "EXTEND",
+    "rationale": "Pre-existing stub at exactly I2's intended location. Extended with RerankConfig (validated), RerankResult, a pluggable CompatibilityScorer interface, and a deterministic neutral fallback scorer -- no clinical model invented, per Section 4's explicit signal audit requirement."
+  },
+  "src/innovation/multi_report_fusion/fusion.py": {
+    "classification": "EXTEND",
+    "rationale": "Pre-existing stub at exactly I3's fusion half. Extended with FusionConfig (validated), FusionDecision, and the EvidenceItem/EvidenceContext structured-evidence contract (dedup + budget enforcement validated at construction time)."
+  },
+  "src/innovation/uncertainty/detector.py": {
+    "classification": "UNUSED",
+    "rationale": "Pre-existing stub for the ORIGINAL Innovation E (uncertainty/ contradiction detection), which is not one of Milestone 3.0's exactly-three required innovations (I1/I2/I3). Left completely untouched, not deleted or rewritten."
+  }
+}

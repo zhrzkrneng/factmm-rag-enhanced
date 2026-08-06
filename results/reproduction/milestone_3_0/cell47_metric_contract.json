@@ -1,0 +1,41 @@
+{
+  "innovation_diagnostics": {
+    "adaptive_k": [
+      "mean_selected_k",
+      "k_distribution",
+      "evidence_reduction_vs_fixed_k"
+    ],
+    "efficiency": [
+      "latency_per_query",
+      "evidence_count",
+      "approximate_context_length"
+    ],
+    "fusion": [
+      "fusion_activation_rate",
+      "mean_evidence_count",
+      "evidence_context_reduction"
+    ],
+    "reranking": [
+      "rank_change_rate",
+      "mean_rank_displacement",
+      "top1_replacement_rate"
+    ]
+  },
+  "metrics": {
+    "clinical": [
+      "f1radgraph",
+      "f1chexbert"
+    ],
+    "generation": [
+      "rouge_l",
+      "bleu4",
+      "bert_score"
+    ],
+    "retrieval": [
+      "mrr",
+      "recall",
+      "ndcg"
+    ]
+  },
+  "note": "Contract only -- no scientific performance is reported by Cell 47."
+}

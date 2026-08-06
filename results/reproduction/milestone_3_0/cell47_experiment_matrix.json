@@ -1,0 +1,255 @@
+{
+  "arms": [
+    {
+      "arm_id": "E0",
+      "config": {
+        "adaptive_k": {
+          "confidence_threshold": 0.5,
+          "default_k": 1,
+          "margin_threshold": 0.0,
+          "max_k": 5,
+          "min_k": 1
+        },
+        "adaptive_retrieval_enabled": false,
+        "confidence_gated_fusion_enabled": false,
+        "factual_reranking_enabled": false,
+        "fusion": {
+          "confidence_threshold": 0.5,
+          "context_budget_chars": 4000,
+          "disagreement_threshold": 0.3,
+          "max_evidence_count": 3
+        },
+        "random_seed": 42,
+        "reranking": {
+          "alpha": 1.0,
+          "beta": 0.0,
+          "gamma": 0.0
+        }
+      },
+      "description": "baseline (no innovation enabled)"
+    },
+    {
+      "arm_id": "E1",
+      "config": {
+        "adaptive_k": {
+          "confidence_threshold": 0.5,
+          "default_k": 1,
+          "margin_threshold": 0.0,
+          "max_k": 5,
+          "min_k": 1
+        },
+        "adaptive_retrieval_enabled": true,
+        "confidence_gated_fusion_enabled": false,
+        "factual_reranking_enabled": false,
+        "fusion": {
+          "confidence_threshold": 0.5,
+          "context_budget_chars": 4000,
+          "disagreement_threshold": 0.3,
+          "max_evidence_count": 3
+        },
+        "random_seed": 42,
+        "reranking": {
+          "alpha": 1.0,
+          "beta": 0.0,
+          "gamma": 0.0
+        }
+      },
+      "description": "Adaptive-K only"
+    },
+    {
+      "arm_id": "E2",
+      "config": {
+        "adaptive_k": {
+          "confidence_threshold": 0.5,
+          "default_k": 1,
+          "margin_threshold": 0.0,
+          "max_k": 5,
+          "min_k": 1
+        },
+        "adaptive_retrieval_enabled": false,
+        "confidence_gated_fusion_enabled": false,
+        "factual_reranking_enabled": true,
+        "fusion": {
+          "confidence_threshold": 0.5,
+          "context_budget_chars": 4000,
+          "disagreement_threshold": 0.3,
+          "max_evidence_count": 3
+        },
+        "random_seed": 42,
+        "reranking": {
+          "alpha": 1.0,
+          "beta": 0.0,
+          "gamma": 0.0
+        }
+      },
+      "description": "Reranking only"
+    },
+    {
+      "arm_id": "E3",
+      "config": {
+        "adaptive_k": {
+          "confidence_threshold": 0.5,
+          "default_k": 1,
+          "margin_threshold": 0.0,
+          "max_k": 5,
+          "min_k": 1
+        },
+        "adaptive_retrieval_enabled": false,
+        "confidence_gated_fusion_enabled": true,
+        "factual_reranking_enabled": false,
+        "fusion": {
+          "confidence_threshold": 0.5,
+          "context_budget_chars": 4000,
+          "disagreement_threshold": 0.3,
+          "max_evidence_count": 3
+        },
+        "random_seed": 42,
+        "reranking": {
+          "alpha": 1.0,
+          "beta": 0.0,
+          "gamma": 0.0
+        }
+      },
+      "description": "Confidence-Gated Fusion only"
+    },
+    {
+      "arm_id": "E4",
+      "config": {
+        "adaptive_k": {
+          "confidence_threshold": 0.5,
+          "default_k": 1,
+          "margin_threshold": 0.0,
+          "max_k": 5,
+          "min_k": 1
+        },
+        "adaptive_retrieval_enabled": true,
+        "confidence_gated_fusion_enabled": false,
+        "factual_reranking_enabled": true,
+        "fusion": {
+          "confidence_threshold": 0.5,
+          "context_budget_chars": 4000,
+          "disagreement_threshold": 0.3,
+          "max_evidence_count": 3
+        },
+        "random_seed": 42,
+        "reranking": {
+          "alpha": 1.0,
+          "beta": 0.0,
+          "gamma": 0.0
+        }
+      },
+      "description": "Adaptive-K + Reranking"
+    },
+    {
+      "arm_id": "E5",
+      "config": {
+        "adaptive_k": {
+          "confidence_threshold": 0.5,
+          "default_k": 1,
+          "margin_threshold": 0.0,
+          "max_k": 5,
+          "min_k": 1
+        },
+        "adaptive_retrieval_enabled": true,
+        "confidence_gated_fusion_enabled": true,
+        "factual_reranking_enabled": false,
+        "fusion": {
+          "confidence_threshold": 0.5,
+          "context_budget_chars": 4000,
+          "disagreement_threshold": 0.3,
+          "max_evidence_count": 3
+        },
+        "random_seed": 42,
+        "reranking": {
+          "alpha": 1.0,
+          "beta": 0.0,
+          "gamma": 0.0
+        }
+      },
+      "description": "Adaptive-K + Fusion"
+    },
+    {
+      "arm_id": "E6",
+      "config": {
+        "adaptive_k": {
+          "confidence_threshold": 0.5,
+          "default_k": 1,
+          "margin_threshold": 0.0,
+          "max_k": 5,
+          "min_k": 1
+        },
+        "adaptive_retrieval_enabled": false,
+        "confidence_gated_fusion_enabled": true,
+        "factual_reranking_enabled": true,
+        "fusion": {
+          "confidence_threshold": 0.5,
+          "context_budget_chars": 4000,
+          "disagreement_threshold": 0.3,
+          "max_evidence_count": 3
+        },
+        "random_seed": 42,
+        "reranking": {
+          "alpha": 1.0,
+          "beta": 0.0,
+          "gamma": 0.0
+        }
+      },
+      "description": "Reranking + Fusion"
+    },
+    {
+      "arm_id": "E7",
+      "config": {
+        "adaptive_k": {
+          "confidence_threshold": 0.5,
+          "default_k": 1,
+          "margin_threshold": 0.0,
+          "max_k": 5,
+          "min_k": 1
+        },
+        "adaptive_retrieval_enabled": true,
+        "confidence_gated_fusion_enabled": true,
+        "factual_reranking_enabled": true,
+        "fusion": {
+          "confidence_threshold": 0.5,
+          "context_budget_chars": 4000,
+          "disagreement_threshold": 0.3,
+          "max_evidence_count": 3
+        },
+        "random_seed": 42,
+        "reranking": {
+          "alpha": 1.0,
+          "beta": 0.0,
+          "gamma": 0.0
+        }
+      },
+      "description": "Adaptive-K + Reranking + Fusion"
+    }
+  ],
+  "identical_across_arms": [
+    "dataset splits",
+    "corpus",
+    "generator (once real generation is introduced)",
+    "prompt template (unless an innovation strictly requires evidence-formatting changes)",
+    "random seed",
+    "evaluation metrics"
+  ],
+  "random_seed": 42,
+  "required_statistical_comparisons": [
+    [
+      "E0",
+      "E1"
+    ],
+    [
+      "E0",
+      "E2"
+    ],
+    [
+      "E0",
+      "E3"
+    ],
+    [
+      "E0",
+      "E7"
+    ]
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "baseline_stages_when_all_disabled": [
+    "query",
+    "initial_retrieval",
+    "evidence_context",
+    "prompt_builder",
+    "generator",
+    "generated_report"
+  ],
+  "independently_switchable": true,
+  "inference_context_fields": [
+    "query_key",
+    "candidate_keys",
+    "candidate_scores",
+    "candidate_texts"
+  ],
+  "innovation_stages": {
+    "I1_adaptive_retrieval_dynamic_k": "adaptive_retrieval_dynamic_k",
+    "I2_factual_clinical_reranking": "factual_clinical_reranking",
+    "I3_confidence_gated_multi_report_fusion": "confidence_gated_multi_report_fusion"
+  },
+  "note": "Design/contract only -- no retrieval, reranking, or fusion algorithm is implemented by this module. See src/innovation/adaptive_retrieval/adaptive_k.py, src/innovation/factual_reranking/reranker.py, and src/innovation/multi_report_fusion/fusion.py for the per-innovation config/result contracts (Cells 48-50 implement the actual decision algorithms).",
+  "pipeline_stages": [
+    "query",
+    "initial_retrieval",
+    "adaptive_retrieval_dynamic_k",
+    "factual_clinical_reranking",
+    "confidence_gated_multi_report_fusion",
+    "evidence_context",
+    "prompt_builder",
+    "generator",
+    "generated_report"
+  ],
+  "stage_gate_flags": {
+    "adaptive_retrieval_dynamic_k": "adaptive_retrieval_enabled",
+    "confidence_gated_multi_report_fusion": "confidence_gated_fusion_enabled",
+    "factual_clinical_reranking": "factual_reranking_enabled"
+  }
+}
