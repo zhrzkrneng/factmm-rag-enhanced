@@ -1,0 +1,33 @@
+{
+  "dataset_root_convention": "${IU_XRAY_STORAGE_ROOT} resolves to <Google Drive mount>/FactMM-RAG-Enhanced/data/iu_xray when Google Drive is mounted at /content/drive/MyDrive, otherwise <REPO_ROOT>/data/iu_xray (see this script's Part 0 for the exact detection logic each run performs).",
+  "excluded_record_count": 129,
+  "full_manifest_bytes": 6255299,
+  "full_manifest_external_path": "${IU_XRAY_STORAGE_ROOT}/canonical/iu_xray_canonical_full.json",
+  "full_manifest_external_path_resolved_this_run": "/content/drive/MyDrive/FactMM-RAG-Enhanced/data/iu_xray/canonical/iu_xray_canonical_full.json",
+  "full_manifest_sha256": "a98723ec67cdd2e19bc7d08ef18cc9d3c04ea1f9eaa47f94833c051ff1b3fcc1",
+  "note": "Lightweight, Git-eligible index only. The complete canonical manifest (all per-record fields, no image bytes) lives outside Git at the path given by dataset_root_convention + full_manifest_external_path (a portable, symbolic reference); full_manifest_external_path_resolved_this_run is the literal absolute path for this specific run only, informational, not meant to be portable. split_manifest_reference names the sibling Git-tracked file (in this same results/reproduction/milestone_2_8/ directory) holding the train/validation/test study_id assignment for these records.",
+  "record_count": 3955,
+  "schema_fields": [
+    "dataset_name",
+    "study_id",
+    "report_id",
+    "image_ids",
+    "image_paths",
+    "image_count",
+    "findings",
+    "impression",
+    "indication",
+    "comparison",
+    "full_report",
+    "mesh_terms",
+    "labels",
+    "source_metadata",
+    "source_split",
+    "validation_status",
+    "exclusion_reason"
+  ],
+  "schema_version": "1.0",
+  "split_manifest_reference": "iu_xray_split_manifest.json",
+  "total_image_count": 7470,
+  "usable_record_count": 3826
+}

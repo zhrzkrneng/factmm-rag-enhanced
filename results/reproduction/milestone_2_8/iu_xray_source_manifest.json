@@ -1,0 +1,67 @@
+{
+  "acquisition_blocked": false,
+  "acquisition_blocked_reason": null,
+  "candidate_sources": [
+    {
+      "access_registration_status": "reachability tested only where a download was actually needed; no credentials supplied",
+      "archive_names": [
+        "NLMCXR_png.tgz",
+        "NLMCXR_reports.tgz"
+      ],
+      "expected_content": "7,470 chest X-ray PNG images + per-report XML metadata with <parentImage> image-report linkage.",
+      "provenance_note": "Direct archive URLs as recorded in Cell 42's iu_xray_dataset_audit.json. Confirmed genuinely reachable and downloadable in a real Colab run (checksums recorded above).",
+      "reachability_detail": "not checked -- already satisfied by reused local files",
+      "reachable_this_run": null,
+      "reports_url": "https://openi.nlm.nih.gov/imgs/collections/NLMCXR_reports.tgz",
+      "retrieval_method": "reuse of already-downloaded local file (checksum-verified) where present; unauthenticated HTTP HEAD reachability check + resumable GET download otherwise",
+      "retrieval_timestamp_utc": "2026-08-06T15:54:05Z",
+      "source_classification": "OFFICIAL",
+      "source_id": "official_nlm_openi",
+      "source_organization": "U.S. National Library of Medicine (NLM), Open-i service",
+      "source_url": "https://openi.nlm.nih.gov/imgs/collections/NLMCXR_png.tgz"
+    },
+    {
+      "access_registration_status": "reachability tested only where a download was actually needed; no credentials supplied",
+      "archive_names": [
+        "indiana_projections.csv",
+        "indiana_reports.csv",
+        "images/"
+      ],
+      "expected_content": "Same 7,470 images / 3,955 reports, PNG format, two flat CSV metadata files.",
+      "provenance_note": "Provenance to IU X-Ray/Open-I verified via Cell 42's audit (GitHub Awesome-Medical-Dataset page). Not used this run -- the official source succeeded.",
+      "reachability_detail": "HTTP 404",
+      "reachable_this_run": false,
+      "reports_url": null,
+      "retrieval_method": "reuse of already-downloaded local file (checksum-verified) where present; unauthenticated HTTP HEAD reachability check + resumable GET download otherwise",
+      "retrieval_timestamp_utc": "2026-08-06T15:54:05Z",
+      "source_classification": "MIRROR_OF_PUBLIC_DATASET",
+      "source_id": "kaggle_mirror_raddar",
+      "source_organization": "Kaggle user 'raddar' (community mirror)",
+      "source_url": "https://www.kaggle.com/datasets/raddar/chest-xrays-indiana-university"
+    },
+    {
+      "access_registration_status": "reachability tested only where a download was actually needed; no credentials supplied",
+      "archive_names": [
+        "UNKNOWN"
+      ],
+      "expected_content": "UNKNOWN",
+      "provenance_note": "Candidate mirror, provenance not independently confirmed by a page read this session. Not used this run.",
+      "reachability_detail": "HTTP 200",
+      "reachable_this_run": true,
+      "reports_url": null,
+      "retrieval_method": "reuse of already-downloaded local file (checksum-verified) where present; unauthenticated HTTP HEAD reachability check + resumable GET download otherwise",
+      "retrieval_timestamp_utc": "2026-08-06T15:54:05Z",
+      "source_classification": "MIRROR_OF_PUBLIC_DATASET",
+      "source_id": "academic_torrents_mirror",
+      "source_organization": "Academic Torrents (community mirror)",
+      "source_url": "https://academictorrents.com/details/66450ba52ba3f83fbf82ef9c91f2bde0e845aba9"
+    }
+  ],
+  "environment_note": "Existing local files are checked and checksum-verified BEFORE any network reachability check or download is attempted; network calls only happen for archives not already present and valid locally.",
+  "known_archive_checksums_reused": {
+    "NLMCXR_png.tgz": "baf3abfe19ba5d58efe69002aed1e71aa2e6d5efb3238db9adcac210ad44bdf2",
+    "NLMCXR_reports.tgz": "8fb6de7eec73d8c3665067ad4bb003ccd57f971ae316d2642e1627ac7268667a"
+  },
+  "run_timestamp_utc": "2026-08-06T15:54:05Z",
+  "source_used": "official_nlm_openi"
+}

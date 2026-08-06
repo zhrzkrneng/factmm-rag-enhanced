@@ -1,0 +1,820 @@
+{
+  "canonicalization_error": null,
+  "checksum_algorithm": "sha256",
+  "corrupt_image_count": 0,
+  "corrupt_images": [],
+  "dataset_root_convention": "${IU_XRAY_STORAGE_ROOT} resolves to <Google Drive mount>/FactMM-RAG-Enhanced/data/iu_xray when Google Drive is mounted at /content/drive/MyDrive, otherwise <REPO_ROOT>/data/iu_xray (see this script's Part 0 for the exact detection logic each run performs).",
+  "downloaded_files": [
+    {
+      "bytes": 1360814128,
+      "name": "NLMCXR_png.tgz",
+      "path": "${IU_XRAY_STORAGE_ROOT}/raw/NLMCXR_png.tgz",
+      "provenance": "reused_existing_verified",
+      "sha256": "baf3abfe19ba5d58efe69002aed1e71aa2e6d5efb3238db9adcac210ad44bdf2"
+    },
+    {
+      "bytes": 1112632,
+      "name": "NLMCXR_reports.tgz",
+      "path": "${IU_XRAY_STORAGE_ROOT}/raw/NLMCXR_reports.tgz",
+      "provenance": "reused_existing_verified",
+      "sha256": "8fb6de7eec73d8c3665067ad4bb003ccd57f971ae316d2642e1627ac7268667a"
+    }
+  ],
+  "duplicate_image_paths": [],
+  "duplicate_study_ids": [],
+  "excluded_record_count": 129,
+  "extraction_summary": {
+    "archives_extracted": 0,
+    "files_extracted": 11425,
+    "rejected_members": [],
+    "reused_existing_extraction": true,
+    "total_bytes": 0
+  },
+  "forbidden_resources_downloaded": [],
+  "malformed_xml_count": 0,
+  "malformed_xml_files": [],
+  "missing_image_record_count": 104,
+  "missing_report_record_count": 25,
+  "missing_tag_record_count": 129,
+  "missing_tag_records": [
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1068"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1080"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1127"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1137"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1142"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1147"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1181"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1185"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1201"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1215"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1227"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1247"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1251"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1293"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1297"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1299"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1325"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1536"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR156"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1566"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR16"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1613"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1615"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1628"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1690"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1692"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1741"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1749"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1761"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1772"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR1778"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR180"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1858"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1862"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1869"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1890"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1917"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1989"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR199"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR1998"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2037"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2057"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2064"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2076"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2107"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR2115"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR213"
+    },
+    {
+      "missing": [
+        "findings_and_impression",
+        "parentImage"
+      ],
+      "report_id": "CXR2182"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2196"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2284"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2309"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2346"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2399"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2429"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2452"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2500"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2521"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2556"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2598"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR2601"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2602"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR265"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2675"
+    },
+    {
+      "missing": [
+        "findings_and_impression",
+        "parentImage"
+      ],
+      "report_id": "CXR2678"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2682"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR2697"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2707"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2736"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2757"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR2765"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2800"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2823"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2834"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2846"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2849"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2853"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2869"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2875"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR2881"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2883"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2907"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2912"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2913"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2914"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2973"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR2987"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3007"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3035"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3107"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3293"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3351"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR3367"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR3376"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3397"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3425"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR3434"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3447"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3463"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3476"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3484"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3558"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3622"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR369"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3710"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR3782"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3788"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3800"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR381"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3859"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3920"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR3973"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR3990"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR528"
+    },
+    {
+      "missing": [
+        "findings_and_impression",
+        "parentImage"
+      ],
+      "report_id": "CXR566"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR574"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR614"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR673"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR678"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR724"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR775"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR789"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR816"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR848"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR873"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR876"
+    },
+    {
+      "missing": [
+        "findings_and_impression"
+      ],
+      "report_id": "CXR894"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR895"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR898"
+    },
+    {
+      "missing": [
+        "parentImage"
+      ],
+      "report_id": "CXR924"
+    }
+  ],
+  "storage_root_resolved_this_run": "/content/drive/MyDrive/FactMM-RAG-Enhanced/data/iu_xray",
+  "usable_record_count": 3826
+}
