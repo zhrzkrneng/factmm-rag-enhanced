@@ -1,0 +1,58 @@
+{
+  "all_blockers_resolved": false,
+  "chexpert": {
+    "automated_download_permitted": false,
+    "checked_via": "direct filesystem check of expected_paths, performed this run",
+    "expected_files": {
+      "data/chexpert/test.json": {
+        "exists": false,
+        "record_count": null
+      }
+    },
+    "licensing_requirement": "Stanford AIMI Shared Datasets registration",
+    "status": "MISSING"
+  },
+  "llava_base_checkpoint": {
+    "checked_via": "read fork_pinned_commit from checkpoint_requirements.json, performed this run",
+    "fork": "haotian-liu/LLaVA",
+    "fork_pinned_commit": null,
+    "identifier": "vicuna-7b-v1.5",
+    "note": "fork_pinned_commit is UNKNOWN -- cannot even identify which commit to validate. This blocker cannot resolve to AVAILABLE via automated re-check; it requires a human/research step (identifying and recording the exact pinned commit) before any future re-check could find it available.",
+    "status": "BLOCKED"
+  },
+  "marvel_warm_start_checkpoint": {
+    "checked_via": "transformers.AutoConfig.from_pretrained(local_files_only=True) inside no_network_calls() -- zero socket connections proven, not merely assumed",
+    "identifier": "OpenMatch/marvel-ance-clueweb",
+    "load_error": "OSError: We couldn't connect to 'https://huggingface.co' to load the files, and couldn't find them in the cached files.\nCheck your internet connection or see how to run the library in offline mode at 'https://huggingface.co/docs/transformers/installation#offline-mode'.",
+    "network_connection_attempts": [],
+    "note": "Full-weight load has never been attempted at any milestone in this project (repository reachability was confirmed in Milestone 2.4G, not the same as a local weight cache); this check only confirms local availability, never fetches. An earlier version of this cell used elapsed-time as network-call evidence, which proved unreliable (0.4ms-7.6s variance in this sandbox with zero actual network activity, confirmed by direct socket instrumentation) -- replaced with this direct, deterministic proof.",
+    "resolved_revision_recorded": "19bd4191e36a285ffa13cad901c670cd785a4aec",
+    "status": "MISSING"
+  },
+  "mimic_cxr": {
+    "automated_download_permitted": false,
+    "checked_via": "direct filesystem check of expected_paths, performed this run",
+    "expected_files": {
+      "data/mimic/test.json": {
+        "exists": false,
+        "record_count": null
+      },
+      "data/mimic/train.json": {
+        "exists": false,
+        "record_count": null
+      },
+      "data/mimic/valid.json": {
+        "exists": false,
+        "record_count": null
+      }
+    },
+    "licensing_requirement": "PhysioNet credentialing (CITI training + signed Data Use Agreement)",
+    "status": "MISSING"
+  },
+  "unresolved_blockers": [
+    "mimic_cxr",
+    "chexpert",
+    "marvel_warm_start_checkpoint",
+    "llava_base_checkpoint"
+  ]
+}
