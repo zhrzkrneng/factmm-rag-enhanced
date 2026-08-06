@@ -1,0 +1,91 @@
+{
+  "chexpert": {
+    "automated_download_permitted": false,
+    "citation": "stanfordaimi.azurewebsites.net (Appendix A.3 footnote)",
+    "credential_requirement": "Stanford AIMI Shared Datasets registration",
+    "credential_source": "PAPER",
+    "expected_paths": [
+      "data/chexpert/test.json"
+    ],
+    "record_schema": {
+      "finding": "str",
+      "image": "list[str]",
+      "impression": "str"
+    },
+    "record_schema_source": "OFFICIAL_REPOSITORY",
+    "splits": {
+      "test_zero_shot": {
+        "expected_records": 1000,
+        "note": "The 1,000 hidden test reports from MIMIC-CXR-RRS, with CheXpert images downloaded separately",
+        "source": "PAPER"
+      }
+    },
+    "used_for": [
+      "zero-shot evaluation only -- never a training source"
+    ],
+    "used_for_source": "PAPER"
+  },
+  "constraint": "This project's tooling must never attempt automated or shared access to either dataset; every download step is user-initiated, outside automation.",
+  "constraint_source": "REASONABLE_INFERENCE",
+  "manifest_checks_required_before_any_run": [
+    "record count per split matches expected_records exactly",
+    "no patient_id appears in more than one split (IntegrityChecker/PatientSplitValidator, Milestone 2.1, reused unmodified)",
+    "every referenced image path exists on disk"
+  ],
+  "manifest_checks_source": "VERIFIED_BASELINE",
+  "manifest_directory": "data/manifests/",
+  "manifest_files_expected": [
+    "train_manifest.json",
+    "valid_manifest.json",
+    "test_manifest.json"
+  ],
+  "mimic_cxr": {
+    "automated_download_permitted": false,
+    "citation": "Section 8, Ethics",
+    "credential_requirement": "PhysioNet credentialing (CITI training + signed Data Use Agreement)",
+    "credential_source": "PAPER",
+    "expected_paths": [
+      "data/mimic/train.json",
+      "data/mimic/valid.json",
+      "data/mimic/test.json"
+    ],
+    "preprocessing": {
+      "frontal_view_selection": {
+        "note": "'we select the frontal view' -- confirms image[0] convention is intentional",
+        "source": "PAPER",
+        "value": true
+      },
+      "text_construction": {
+        "source": "PAPER",
+        "value": "finding + impression concatenated"
+      }
+    },
+    "record_schema": {
+      "finding": "str",
+      "image": "list[str] (paths, image[0] = frontal view used)",
+      "impression": "str"
+    },
+    "record_schema_source": "OFFICIAL_REPOSITORY",
+    "split_provenance": "Delbrouck et al. 2023 (vilmedic ACL-2023 RadSum23 split)",
+    "split_provenance_source": "PAPER",
+    "splits": {
+      "test": {
+        "expected_records": 1624,
+        "source": "PAPER"
+      },
+      "train": {
+        "expected_records": 125417,
+        "source": "PAPER"
+      },
+      "valid": {
+        "expected_records": 991,
+        "source": "PAPER"
+      }
+    },
+    "used_for": [
+      "retriever training",
+      "generator training",
+      "in-domain evaluation"
+    ]
+  }
+}

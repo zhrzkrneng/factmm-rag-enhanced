@@ -1,0 +1,181 @@
+{
+  "baseline_tag": "baseline-v1.0",
+  "config_version": "2.7.0",
+  "decoding_parameters": {
+    "note": "Neither the paper nor the official repository's shipped scripts specify exact inference-time decoding parameters (sampling vs. greedy, temperature, top-p/top-k, max new tokens) for report generation. Must be pinned explicitly (greedy or fixed-seed sampling) by this project's own reproduction tooling before any run, per the contract's determinism policy -- not assumed from either source.",
+    "source": "UNKNOWN"
+  },
+  "discrepancies": {
+    "retriever_contrastive_temperature": {
+      "citation_code": "train.py logit_scale, initialized from pretrained CLIPModel",
+      "citation_paper": "Appendix A.1",
+      "official_repository_source": "OFFICIAL_REPOSITORY",
+      "official_repository_value": {
+        "initial_effective_tau_approx": 0.07,
+        "mode": "learned_logit_scale"
+      },
+      "paper_source": "PAPER",
+      "paper_value": {
+        "mode": "fixed",
+        "tau": 0.01
+      },
+      "resolution": "unresolved -- both modes implemented in RetrieverConfig.temperature_mode, both real-weight-verified (Milestone 2.4G), neither yet chosen for a reported number"
+    },
+    "top_k_positives_per_query": {
+      "citation_code": "gen_topk_pos.sh default",
+      "citation_paper": "Implementation Details, 'top 2 factual report pairs'",
+      "official_repository_source": "OFFICIAL_REPOSITORY",
+      "official_repository_value": 3,
+      "paper_source": "PAPER",
+      "paper_value": 2,
+      "resolution": "unresolved -- both values must be run as separate, fully reported arms, never silently picked"
+    }
+  },
+  "environment_pins": {
+    "evaluation_stage": {
+      "bert_score": "0.3.13",
+      "evaluate": "0.4.6",
+      "f1chexbert": "0.0.2",
+      "note": "Real-installed and CELL 36: PASS-verified, Milestone 2.6",
+      "pytrec_eval": "0.5",
+      "radgraph": "0.0.9",
+      "rouge": "1.0.1",
+      "source": "VERIFIED_BASELINE"
+    },
+    "generator_stage": {
+      "note": "Never installed or exercised in this project to date",
+      "peft": "0.10.0",
+      "source": "OFFICIAL_REPOSITORY",
+      "transformers": "4.36.2"
+    },
+    "retriever_stage": {
+      "f1chexbert": "0.0.2",
+      "faiss_cpu": "1.10.0",
+      "note": "torch==1.13.1/transformers==4.23.1 not installable on Python 3.12 (docs/risk_register.md #8c); this project uses transformers==4.57.6 as a forced, disclosed deviation",
+      "radgraph": "0.0.9",
+      "source": "OFFICIAL_REPOSITORY",
+      "torch": "1.13.1",
+      "transformers": "4.23.1"
+    }
+  },
+  "generator": {
+    "backbone_variation_tested": "LLaVA-1.6",
+    "base_model": "LLaVA-1.5",
+    "fork_pinned_commit": {
+      "note": "haotian-liu/LLaVA fork commit hash not recorded anywhere in this project's docs to date",
+      "source": "UNKNOWN",
+      "value": null
+    },
+    "hardware_paper": {
+      "gpus": "8x NVIDIA RTX A6000",
+      "source": "PAPER",
+      "wall_clock_hours": 4
+    },
+    "init_checkpoint": "vicuna-7b-v1.5",
+    "source": "PAPER",
+    "training_hyperparameters": {
+      "epochs": 1,
+      "global_batch_size": 128,
+      "learning_rate": 2e-05,
+      "note": "Fills a gap the OFFICIAL_REPOSITORY left unspecified in its own scripts",
+      "source": "PAPER"
+    }
+  },
+  "pair_mining": {
+    "chexbert_threshold": {
+      "note": "Figure 2d best-performing setting, matches OFFICIAL_REPOSITORY default",
+      "source": "PAPER",
+      "value": 1.0
+    },
+    "radgraph_threshold": {
+      "note": "gen_topk_pos.sh default; consistent with PAPER's ablation sweep range",
+      "source": "OFFICIAL_REPOSITORY",
+      "value": 0.4
+    },
+    "training_corpus_size_n": {
+      "note": "gen_topk_pos.sh, MIMIC-CXR train split size",
+      "source": "OFFICIAL_REPOSITORY",
+      "value": 125417
+    }
+  },
+  "prompt_mode": {
+    "citation": "Figure 5, matches build_rag_dataset.py exactly",
+    "exclusions": {
+      "citation": "build_rag_dataset.py, Appendix A.2",
+      "same_patient": true,
+      "same_study": true,
+      "source": "OFFICIAL_REPOSITORY"
+    },
+    "non_rag_vqa": {
+      "source": "PAPER",
+      "template": "Generate a radiology report from this image:\\n<image>"
+    },
+    "rag": {
+      "source": "PAPER",
+      "template": "Here is a report of a related patient:\\n\"<document>\"\\nGenerate a radiology report from this image:\\n<image>"
+    },
+    "retrieval_depth": {
+      "note": "Exactly one report retrieved per query image at inference -- no multi-report retrieval in the baseline",
+      "source": "PAPER",
+      "value": 1
+    }
+  },
+  "retrieval_metric_k_values": {
+    "note": "evaluate_retriever.py's pytrec_eval cutoffs; matches baseline-v1.0's RetrievalMetricsConfig default exactly",
+    "source": "OFFICIAL_REPOSITORY",
+    "values": [
+      100,
+      200,
+      500,
+      1000
+    ]
+  },
+  "retriever": {
+    "architecture": {
+      "paper_generic_description": "MARVEL (T5-ANCE text + Vision Transformer)",
+      "paper_generic_description_source": "PAPER",
+      "text_backbone": "T5-ANCE (OpenMatch/t5-ance)",
+      "text_backbone_source": "OFFICIAL_REPOSITORY",
+      "vision_backbone": "CLIPVisionModel (openai/clip-vit-base-patch32, ViT-B/32)",
+      "vision_backbone_source": "OFFICIAL_REPOSITORY"
+    },
+    "hard_negative_mining": {
+      "filter": "chexbert_similarity < 1.0 AND radgraph_similarity < 0.4",
+      "note": "PAPER cites the method (modality-balanced hard negatives, MARVEL/T5-ANCE recipe) but does not restate these exact numeric thresholds",
+      "num_hard_negatives_kept": 2,
+      "source": "OFFICIAL_REPOSITORY",
+      "top_n_by_embedding": 100
+    },
+    "hardware_paper": {
+      "gpus": "1x NVIDIA RTX A6000",
+      "source": "PAPER",
+      "wall_clock_hours": 10
+    },
+    "init_checkpoints_compared": {
+      "clueweb": "PAPER",
+      "headline_table1_uses": "clueweb",
+      "webqa": "PAPER"
+    },
+    "training_hyperparameters": {
+      "batch_size": 32,
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "early_stop_patience": 5,
+      "epochs": 15,
+      "eps": 1e-06,
+      "learning_rate": 5e-06,
+      "note": "Matches PAPER Appendix A.1 exactly except temperature (see discrepancies)",
+      "optimizer": "AdamW",
+      "schedule": "cosine warmup",
+      "source": "OFFICIAL_REPOSITORY",
+      "weight_decay_non_bias": 0.2
+    }
+  },
+  "seed_policy": {
+    "default_seed": 42,
+    "note": "Matches this project's own established convention (EvaluationRunConfig, SignificanceConfig, etc.); the paper does not state a seed. Evaluation-only runs: single deterministic pass sufficient. Any real training run: >=3 seeds recommended before reporting a mean/CI (contract SS17).",
+    "source": "REASONABLE_INFERENCE"
+  }
+}

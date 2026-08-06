@@ -1,0 +1,56 @@
+{
+  "clip_vision": {
+    "repo_id": "openai/clip-vit-base-patch32",
+    "resolved_revision": "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268",
+    "source": "OFFICIAL_REPOSITORY",
+    "status": "real forward pass verified (Milestone 2.4G)",
+    "status_source": "VERIFIED_BASELINE"
+  },
+  "f1chexbert": {
+    "checkpoint_auth_required": false,
+    "checkpoint_file": "chexbert.pth",
+    "checkpoint_size_gb_approx": 1.25,
+    "package": "f1chexbert",
+    "pinned_version": "0.0.2",
+    "source": "OFFICIAL_REPOSITORY",
+    "status": "real, verified (Milestones 2.2/2.6)",
+    "status_source": "VERIFIED_BASELINE"
+  },
+  "llava_1_6": {
+    "note": "Named only in the Table 2 backbone-variation ablation; not required for the primary Table 1 reproduction target",
+    "source": "PAPER",
+    "status": "lower priority, not yet pursued"
+  },
+  "llava_base": {
+    "checkpoint": "vicuna-7b-v1.5",
+    "fork": "haotian-liu/LLaVA",
+    "fork_pinned_commit": null,
+    "fork_pinned_commit_source": "UNKNOWN",
+    "source": "PAPER",
+    "status": "never downloaded, never run",
+    "status_source": "VERIFIED_BASELINE"
+  },
+  "marvel_warm_start": {
+    "candidate_file": "model.best.pt",
+    "repo_id": "OpenMatch/marvel-ance-clueweb",
+    "resolved_revision": "19bd4191e36a285ffa13cad901c670cd785a4aec",
+    "source": "OFFICIAL_REPOSITORY",
+    "status": "repository reachability confirmed; full-weight load NEVER attempted; parameter-name mapping to MultiModalRetriever (a from-scratch reimplementation, not a direct port) is likely required and untested",
+    "status_source": "VERIFIED_BASELINE"
+  },
+  "radgraph": {
+    "note": "Paper states no version; 0.0.9 is the operative version per project rules against inventing missing detail",
+    "package": "radgraph",
+    "pinned_version": "0.0.9",
+    "source": "OFFICIAL_REPOSITORY",
+    "status": "real, verified (Milestones 2.2/2.6)",
+    "status_source": "VERIFIED_BASELINE"
+  },
+  "t5_ance": {
+    "repo_id": "OpenMatch/t5-ance",
+    "resolved_revision": "bf70ee32b49c3e8c1d40982feebbc3b9930eeab4",
+    "source": "OFFICIAL_REPOSITORY",
+    "status": "real forward pass verified (Milestone 2.4G)",
+    "status_source": "VERIFIED_BASELINE"
+  }
+}
