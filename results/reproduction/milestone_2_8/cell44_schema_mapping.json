@@ -1,0 +1,123 @@
+{
+  "dropped_iu_xray_field_count": 11,
+  "dropped_iu_xray_fields": [
+    "report_id",
+    "image_ids",
+    "image_count",
+    "indication",
+    "comparison",
+    "full_report",
+    "mesh_terms",
+    "labels",
+    "source_metadata",
+    "source_split",
+    "validation_status / exclusion_reason"
+  ],
+  "mapping_table": [
+    {
+      "baseline_field": "dataset",
+      "iu_xray_field": "dataset_name",
+      "loss_or_caveat": "source value ('iu_xray') is discarded in favor of the project-convention-matching tag; no information loss (both name the same dataset)",
+      "transformation": "NOT copied verbatim -- replaced with the constant 'iu-xray' (baseline's existing dataset-tag convention uses hyphens: 'mimic-cxr', 'chexpert'; Cell 43's own canonical records use 'iu_xray' with an underscore internally)"
+    },
+    {
+      "baseline_field": "study_id",
+      "iu_xray_field": "study_id",
+      "loss_or_caveat": "none",
+      "transformation": "direct copy"
+    },
+    {
+      "baseline_field": "patient_id",
+      "iu_xray_field": "(none)",
+      "loss_or_caveat": "IU X-Ray has no patient-level identifier distinct from study_id; using study_id as patient_id means PatientSplitValidator's cross-split leakage check becomes trivially satisfied for this dataset (each synthetic patient_id maps to exactly one study by construction) -- it provides no real patient-level leakage protection here.",
+      "transformation": "adapter rule: study_id_as_patient_id"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "report_id",
+      "loss_or_caveat": "equals study_id for this dataset (Cell 43 XML convention); not carried into ReportRecord",
+      "transformation": "dropped"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "image_ids",
+      "loss_or_caveat": "baseline has no per-image-identifier concept, only an ordered path list; preserved on IuXrayCanonicalRecord itself",
+      "transformation": "dropped from ReportRecord"
+    },
+    {
+      "baseline_field": "image_paths",
+      "iu_xray_field": "image_paths",
+      "loss_or_caveat": "baseline's frontal_image_path property assumes image_paths[0] is the frontal view (MIMIC-CXR/CheXpert convention); IU X-Ray provides no confirmed view-position metadata to verify this ordering (Cell 42 audit: UNKNOWN)",
+      "transformation": "resolve ${IU_XRAY_STORAGE_ROOT} token per entry, then copy in order"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "image_count",
+      "loss_or_caveat": "redundant with len(image_paths); not a ReportRecord field",
+      "transformation": "dropped"
+    },
+    {
+      "baseline_field": "finding",
+      "iu_xray_field": "findings",
+      "loss_or_caveat": "ReportRecord.finding is a required non-null str; a 'valid' IU X-Ray record with findings=None (e.g. impression-only) cannot be mapped -- raises IuXraySchemaMappingError rather than fabricating text or silently coercing to ''",
+      "transformation": "direct copy"
+    },
+    {
+      "baseline_field": "impression",
+      "iu_xray_field": "impression",
+      "loss_or_caveat": "same non-null requirement and failure mode as findings above",
+      "transformation": "direct copy"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "indication",
+      "loss_or_caveat": "no baseline field; MIMIC-CXR/CheXpert reports have no Indication section in this project's schema",
+      "transformation": "dropped"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "comparison",
+      "loss_or_caveat": "no baseline field; same reasoning as indication",
+      "transformation": "dropped"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "full_report",
+      "loss_or_caveat": "NOT the same concept as ReportRecord.combined_text (finding+' '+impression only, per the official FactMM-RAG convention) -- full_report additionally includes comparison/indication when present; must not be conflated with combined_text",
+      "transformation": "dropped"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "mesh_terms",
+      "loss_or_caveat": "no baseline field; not CheXpert-style structured labels",
+      "transformation": "dropped"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "labels",
+      "loss_or_caveat": "no baseline field",
+      "transformation": "dropped"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "source_metadata",
+      "loss_or_caveat": "preserved on IuXrayCanonicalRecord only",
+      "transformation": "dropped from ReportRecord"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "source_split",
+      "loss_or_caveat": "split membership is a loader-level concern (dataset.load_split()), not a ReportRecord field",
+      "transformation": "not embedded per-record"
+    },
+    {
+      "baseline_field": "(none)",
+      "iu_xray_field": "validation_status / exclusion_reason",
+      "loss_or_caveat": "excluded records are never passed to the mapper by default (dataset.py's include_excluded=False)",
+      "transformation": "drives inclusion filtering upstream of mapping"
+    }
+  ],
+  "never_fabricates_mimic_chexpert_values": true,
+  "raises_on_missing_findings_or_impression": true,
+  "row_count": 17
+}

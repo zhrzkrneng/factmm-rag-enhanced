@@ -1,0 +1,63 @@
+{
+  "abandoned_claims": [
+    "exact FactMM-RAG reproduction",
+    "direct comparability to MIMIC-CXR/CheXpert paper scores",
+    "real retriever execution",
+    "real Vicuna/LLaVA generation",
+    "scientific performance from mock outputs",
+    "completed baseline result table"
+  ],
+  "cell_audit": {
+    "cell_40": "Resource discovery -- 10-resource inventory (2 datasets, 7 checkpoints, 1 code dependency) under the (now-superseded) MIMIC-CXR/CheXpert/MARVEL scope.",
+    "cell_41": "Acquisition planning -- Category A/B/C classification of Cell 40's inventory.",
+    "cell_42": "IU X-Ray scope migration -- MIMIC-CXR/CheXpert DEFERRED, MARVEL REMOVED, Vicuna DEFERRED to generator stage; new scientific claim adopted; IU X-Ray audited (7,470 images / 3,955 reports).",
+    "cell_43": "Official IU X-Ray acquisition (openi.nlm.nih.gov, checksum-verified), safe extraction, canonicalization (3,826 usable / 129 excluded), deterministic 80/10/10 split (3060/382/384).",
+    "cell_44": "IU X-Ray loader (src/data/iu_xray/) + schema mapping to ReportRecord; real-data-validated against the Drive-backed manifest.",
+    "cell_45": "Retrieval/generation/prompt pipeline integration against the real, unmodified src.baseline interfaces; target-report policy; self-match exclusion; real-data-validated.",
+    "cell_46": "CPU-only end-to-end readiness dry run (4 diagnostic arms), component readiness matrix, metric readiness smoke test, Milestone 2.8 closure."
+  },
+  "deferred_work": [
+    "replacement_retriever_selection",
+    "embedding_generation",
+    "vector_index",
+    "vicuna_llava_access",
+    "llava_vision_tower",
+    "mm_projector",
+    "mimic_cxr_dataset",
+    "chexpert_dataset",
+    "real_generator_inference",
+    "real_baseline_result_table"
+  ],
+  "may_claim": [
+    "architecture-faithful adaptation inspired by FactMM-RAG",
+    "official public IU X-Ray acquisition and deterministic preprocessing",
+    "validated loader and schema adaptation",
+    "validated retrieval/generation/prompt interfaces",
+    "CPU-only end-to-end readiness",
+    "readiness to implement the selected retriever and generator",
+    "controlled future baseline-versus-innovation design"
+  ],
+  "milestone_2_8_ready_to_close": true,
+  "readiness_totals": {
+    "BLOCKED": 0,
+    "DEFERRED": 10,
+    "PARTIALLY_READY": 4,
+    "READY": 16,
+    "REMOVED": 1
+  },
+  "remaining_gpu_model_needs": [
+    "Selecting and implementing a replacement retriever (embedding model + FAISS index).",
+    "Acquiring and loading Vicuna-7B-v1.5 (or another selected generator backbone).",
+    "Real generator inference (LLaVA-style multimodal generation).",
+    "Empirical validation of F1RadGraph/F1CheXbert behavior on real IU X-Ray-derived generated text.",
+    "Building the first real baseline-vs-innovation result table."
+  ],
+  "removed_work": [
+    "marvel_warm_start_checkpoint"
+  ],
+  "superseded_assumptions": [
+    "MIMIC-CXR/CheXpert as the primary executable benchmark (Cell 42).",
+    "MARVEL as the required retriever warm-start checkpoint (Cell 42).",
+    "Exact numerical reproduction of the FactMM-RAG paper's MIMIC-CXR/CheXpert results (Cell 42)."
+  ]
+}

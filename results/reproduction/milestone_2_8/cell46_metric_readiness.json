@@ -1,0 +1,34 @@
+{
+  "clinical_metric_caveats": [
+    "F1RadGraph and F1CheXbert were both trained/validated on MIMIC-CXR-style Findings/Impression text (Cell 42's audit); their behavior on IU X-Ray's four-section, generally shorter reports is UNKNOWN and not empirically tested by this project -- classified PARTIALLY_READY, never READY, until that is done with real generated text.",
+    "IU X-Ray provides no confirmed official structured image labels (Cell 42 audit) -- F1CheXbert's dataset-level (not instance-level) variant, which compares against ground-truth structured labels, has no confirmed IU-X-Ray-native label source to compare against."
+  ],
+  "generation_metrics_smoke_ok": true,
+  "generation_metrics_tested": [
+    "bert_score",
+    "bleu4",
+    "f1chexbert",
+    "f1chexbert_instance",
+    "f1radgraph",
+    "rouge_l"
+  ],
+  "metric_status": {
+    "bert_score": "PARTIALLY_READY",
+    "bleu4": "PARTIALLY_READY",
+    "bootstrap_significance": "READY",
+    "f1_chexbert": "PARTIALLY_READY",
+    "f1_radgraph": "PARTIALLY_READY",
+    "mrr": "PARTIALLY_READY",
+    "ndcg_at_k": "PARTIALLY_READY",
+    "recall_at_k": "PARTIALLY_READY",
+    "rouge_l": "PARTIALLY_READY"
+  },
+  "retrieval_metrics_smoke_ok": true,
+  "retrieval_metrics_tested": [
+    "mrr",
+    "ndcg",
+    "recall"
+  ],
+  "significance_smoke_ok": true,
+  "values_are_mock_never_scientific": true
+}

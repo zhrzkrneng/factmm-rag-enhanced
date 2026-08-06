@@ -1,0 +1,25 @@
+{
+  "contract": {
+    "generation_sample_policy": "One RAGDatasetRow per usable study (never per image), built by src.baseline.generation.dataset_builder.RAGDatasetBuilder itself (unmodified) from this module's query_records/corpus_records/knn_rankings. target_report_text is exactly the target-report-policy text (see src.data.iu_xray.target_report_policy) -- never altered by RAGDatasetBuilder, which only ever reads it verbatim from query_records[query_key][output_data_mode].",
+    "no_embeddings_computed": true,
+    "no_faiss_index_built": true,
+    "no_retriever_selected": true,
+    "ranking_sources": {
+      "deterministic_synthetic": "sorted corpus minus self -- NOT a real retriever result",
+      "empty": "every row excluded=True (contract validation only)",
+      "oracle": "diagnostic-only self-reference, isolated from the main flow"
+    },
+    "text_field": "finding"
+  },
+  "real_data": {
+    "attempted": true,
+    "external_manifest_status": {
+      "available": true,
+      "error": null,
+      "path": "/content/drive/MyDrive/FactMM-RAG-Enhanced/data/iu_xray/canonical/iu_xray_canonical_full.json"
+    },
+    "no_self_match_in_non_oracle_fixtures": true,
+    "one_generation_sample_per_usable_study": true,
+    "usable_total": 3826
+  }
+}

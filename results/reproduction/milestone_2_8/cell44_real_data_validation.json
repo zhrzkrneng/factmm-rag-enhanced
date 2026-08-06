@@ -1,0 +1,57 @@
+{
+  "attempted": true,
+  "external_manifest_status": {
+    "available": true,
+    "error": null,
+    "path": "/content/drive/MyDrive/FactMM-RAG-Enhanced/data/iu_xray/canonical/iu_xray_canonical_full.json"
+  },
+  "image_sample_check_ok": true,
+  "image_sample_details": [
+    {
+      "path": "/content/drive/MyDrive/FactMM-RAG-Enhanced/data/iu_xray/extracted/CXR1_1_IM-0001-3001.png",
+      "readable": true,
+      "study_id": "CXR1"
+    },
+    {
+      "path": "/content/drive/MyDrive/FactMM-RAG-Enhanced/data/iu_xray/extracted/CXR1012_IM-0013-1001.png",
+      "readable": true,
+      "study_id": "CXR1012"
+    }
+  ],
+  "linked_images_matches_7430": true,
+  "linked_usable_images_total": 7430,
+  "missing_optional_section_sample_count": 5,
+  "missing_optional_section_sample_study_ids": [
+    "CXR1002",
+    "CXR1006",
+    "CXR1013",
+    "CXR1016",
+    "CXR1029"
+  ],
+  "multi_image_sample_count": 5,
+  "multi_image_sample_study_ids": [
+    "CXR1",
+    "CXR1000",
+    "CXR1001",
+    "CXR1002",
+    "CXR1004"
+  ],
+  "no_excluded_record_loaded": true,
+  "repeated_run_determinism_ok": true,
+  "single_image_sample_count": 5,
+  "single_image_sample_study_ids": [
+    "CXR1012",
+    "CXR1026",
+    "CXR1029",
+    "CXR1031",
+    "CXR1036"
+  ],
+  "split_counts": {
+    "test": 384,
+    "train": 3060,
+    "validation": 382
+  },
+  "total_canonical_records": 3955,
+  "usable_total": 3826,
+  "usable_total_matches_3826": true
+}

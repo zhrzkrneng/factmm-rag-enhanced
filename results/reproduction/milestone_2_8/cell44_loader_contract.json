@@ -1,0 +1,49 @@
+{
+  "baseline_report_record_fields": [
+    "image_paths",
+    "finding",
+    "impression",
+    "patient_id",
+    "study_id",
+    "dataset"
+  ],
+  "canonical_record_schema_fields": [
+    "dataset_name",
+    "study_id",
+    "report_id",
+    "image_ids",
+    "image_paths",
+    "image_count",
+    "findings",
+    "impression",
+    "indication",
+    "comparison",
+    "full_report",
+    "mesh_terms",
+    "labels",
+    "source_metadata",
+    "source_split",
+    "validation_status",
+    "exclusion_reason"
+  ],
+  "cpu_only": true,
+  "dataset_tag": "iu-xray",
+  "deterministic_ordering": "records returned in the order Cell 43's split manifest recorded them (sorted ascending study_id, per its own documented seed=42 algorithm)",
+  "expected_split_counts": {
+    "test": 384,
+    "train": 3060,
+    "validation": 382
+  },
+  "include_excluded_default": false,
+  "lazy_image_loading": "IuXrayDataset.get_metadata() never opens image files; IuXrayDataset.load_images_for() opens them on demand only",
+  "no_gpu_tensors": true,
+  "no_model_specific_preprocessing": true,
+  "one_item_per_study_not_per_image": true,
+  "package": "src.data.iu_xray",
+  "patient_id_strategy": "study_id_as_patient_id",
+  "split_names": [
+    "train",
+    "validation",
+    "test"
+  ]
+}

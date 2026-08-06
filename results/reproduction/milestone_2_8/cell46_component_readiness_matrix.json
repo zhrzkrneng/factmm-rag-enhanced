@@ -1,0 +1,135 @@
+{
+  "matrix": {
+    "archive_checksums": {
+      "rationale": "Cell 43: SHA-256 recorded and reused; Cell 44/45/46 all re-verify against it before any real-data step.",
+      "status": "READY"
+    },
+    "bootstrap_significance_framework": {
+      "rationale": "src.evaluation.significance.paired_bootstrap_significance has no model/embedding dependency at all -- fully exercisable today on any valid paired score arrays, IU-X-Ray-derived or otherwise; smoke-tested for real with synthetic scores.",
+      "status": "READY"
+    },
+    "canonical_manifest": {
+      "rationale": "Cell 43: 3,955 records canonicalized, 3,826 usable, real-data-verified; lightweight index + external full manifest, hash-verified on every later cell.",
+      "status": "READY"
+    },
+    "chexpert_dataset": {
+      "rationale": "Cell 42 scope migration: DEFERRED/NOT REQUIRED, same reasoning as MIMIC-CXR.",
+      "status": "DEFERRED"
+    },
+    "clinical_metric_interfaces": {
+      "rationale": "F1RadGraph/F1CheXbert interfaces structurally smoke-tested via the mock registry, but both were trained/validated on MIMIC-CXR-style text; applicability to IU X-Ray text is UNKNOWN and not empirically tested by this project (see metric readiness caveats).",
+      "status": "PARTIALLY_READY"
+    },
+    "deterministic_split": {
+      "rationale": "Cell 43: seed=42 80/10/10 split, real-data-verified counts (3060/382/384), no overlap.",
+      "status": "READY"
+    },
+    "embedding_generation": {
+      "rationale": "No embeddings computed anywhere in Cells 42-46; requires a selected retriever first.",
+      "status": "DEFERRED"
+    },
+    "generation_dataset_adapter": {
+      "rationale": "Cell 45: build_generation_records + ranking builders, real-data-validated against the real RAGDatasetBuilder.",
+      "status": "READY"
+    },
+    "generation_metric_interfaces": {
+      "rationale": "src.evaluation.generation_metrics interfaces (ROUGE-L/BLEU-4/BERTScore) structurally smoke-tested via build_mock_metric_registry -- same caveat as retrieval metrics.",
+      "status": "PARTIALLY_READY"
+    },
+    "innovation_phase_entry_readiness": {
+      "rationale": "The data/schema/retrieval/generation/prompt pipeline is CPU-ready end-to-end (Cells 44-46), but Innovation-phase work also needs a selected retriever and generator stage, both still DEFERRED.",
+      "status": "PARTIALLY_READY"
+    },
+    "llava_vision_tower": {
+      "rationale": "Same generator-stage deferral as Vicuna/LLaVA access.",
+      "status": "DEFERRED"
+    },
+    "loader": {
+      "rationale": "Cell 44: IuXrayDataset, real-data-validated against the Drive-backed manifest.",
+      "status": "READY"
+    },
+    "marvel_warm_start_checkpoint": {
+      "rationale": "Explicitly removed from required resources per the Cell 42 scope migration.",
+      "status": "REMOVED"
+    },
+    "mimic_cxr_dataset": {
+      "rationale": "Cell 42 scope migration: DEFERRED/NOT REQUIRED under the new IU X-Ray primary-dataset scope.",
+      "status": "DEFERRED"
+    },
+    "mm_projector": {
+      "rationale": "Cell 42 scope migration: reassessed under whatever adapted architecture is eventually chosen; not resolved by Cells 42-46.",
+      "status": "DEFERRED"
+    },
+    "mock_generator_smoke_path": {
+      "rationale": "Cell 46 Arm 4: real MockGeneratorAdapter, no ML dependency, labeled diagnostic-only.",
+      "status": "READY"
+    },
+    "mock_retrieval_diagnostics": {
+      "rationale": "Cell 46 Arm 2: deterministic MOCK_RETRIEVAL diagnostic, explicitly labeled, never presented as retrieval performance.",
+      "status": "READY"
+    },
+    "official_iu_xray_acquisition": {
+      "rationale": "Cell 43: real download from openi.nlm.nih.gov, checksum-verified, real-data-validated in Colab.",
+      "status": "READY"
+    },
+    "oracle_diagnostic_arm": {
+      "rationale": "Cell 46 Arm 3: real OracleEvaluator with injected fake scorers, isolated, labeled NON-DEPLOYABLE DIAGNOSTIC.",
+      "status": "READY"
+    },
+    "prompt_builder_compatibility": {
+      "rationale": "Cell 45: PromptBuilder validated unmodified against IU-X-Ray-derived text, real-data-verified, no target-report leakage.",
+      "status": "READY"
+    },
+    "real_baseline_result_table": {
+      "rationale": "No scientific baseline result exists yet -- requires a selected retriever, real embeddings, and real generation, none of which have occurred.",
+      "status": "DEFERRED"
+    },
+    "real_generator_inference": {
+      "rationale": "No real generator has been loaded or run anywhere in Cells 42-46 -- explicitly out of this cell's scope.",
+      "status": "DEFERRED"
+    },
+    "replacement_retriever_selection": {
+      "rationale": "Explicitly deferred per the Cell 42 scope migration -- not selected or implemented in Cells 42-46.",
+      "status": "DEFERRED"
+    },
+    "retrieval_metric_interfaces": {
+      "rationale": "src.evaluation.retrieval_metrics interfaces (MRR/Recall/NDCG) structurally smoke-tested via the real build_mock_retrieval_metric_registry -- interface proven compatible, but no real retrieval has run, so no scientific measurement exists yet.",
+      "status": "PARTIALLY_READY"
+    },
+    "retrieval_query_corpus_adapter": {
+      "rationale": "Cell 45: build_records/build_corpus/build_queries, real-data-validated, accepted by the real RetrieverTrainingDataset.",
+      "status": "READY"
+    },
+    "safe_extraction": {
+      "rationale": "Cell 43: path-traversal-safe tarfile extraction, real-data-verified (11,425 files extracted).",
+      "status": "READY"
+    },
+    "schema_mapping": {
+      "rationale": "Cell 44: IU X-Ray -> ReportRecord mapping, real-data-validated, explicit documented gaps (17-row mapping table).",
+      "status": "READY"
+    },
+    "self_match_exclusion": {
+      "rationale": "Cell 45/46: filter_self_matches + RAGDatasetBuilder's own independent enforcement, real-data-verified across all three splits.",
+      "status": "READY"
+    },
+    "target_report_policy": {
+      "rationale": "Cell 45: 4-branch deterministic policy, real-data-validated; branch 4 disclosed as practically unreachable given Cell 43's own validity rule.",
+      "status": "READY"
+    },
+    "vector_index": {
+      "rationale": "No FAISS or other vector index built anywhere in Cells 42-46; requires real embeddings first.",
+      "status": "DEFERRED"
+    },
+    "vicuna_llava_access": {
+      "rationale": "Per Cell 42 scope migration: Vicuna-7B-v1.5 remains the intended generator backbone but is deferred to a later generator stage; no download or HF token request has occurred.",
+      "status": "DEFERRED"
+    }
+  },
+  "totals": {
+    "BLOCKED": 0,
+    "DEFERRED": 10,
+    "PARTIALLY_READY": 4,
+    "READY": 16,
+    "REMOVED": 1
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "baseline_required_rag_output_fields": [
+    "dataset",
+    "patient_id",
+    "study_id",
+    "retrieved_key",
+    "image_path",
+    "retrieved_report_text",
+    "target_report_text",
+    "rank_selected",
+    "num_candidates_rejected_self_study",
+    "num_candidates_rejected_self_patient",
+    "num_candidates_rejected_short_text",
+    "fallback_used",
+    "excluded",
+    "strict_patient_isolation",
+    "reproduce_official_bug",
+    "config_version"
+  ],
+  "baseline_required_retrieval_fields": [
+    "dataset",
+    "patient_id",
+    "study_id",
+    "finding",
+    "image_path"
+  ],
+  "generation_contract": {
+    "generation_sample_policy": "One RAGDatasetRow per usable study (never per image), built by src.baseline.generation.dataset_builder.RAGDatasetBuilder itself (unmodified) from this module's query_records/corpus_records/knn_rankings. target_report_text is exactly the target-report-policy text (see src.data.iu_xray.target_report_policy) -- never altered by RAGDatasetBuilder, which only ever reads it verbatim from query_records[query_key][output_data_mode].",
+    "no_embeddings_computed": true,
+    "no_faiss_index_built": true,
+    "no_retriever_selected": true,
+    "ranking_sources": {
+      "deterministic_synthetic": "sorted corpus minus self -- NOT a real retriever result",
+      "empty": "every row excluded=True (contract validation only)",
+      "oracle": "diagnostic-only self-reference, isolated from the main flow"
+    },
+    "text_field": "finding"
+  },
+  "integration_targets": {
+    "generation": "src.baseline.generation.dataset_builder.RAGDatasetBuilder (unmodified)",
+    "prompt": "src.baseline.generation.prompt_builder.PromptBuilder (unmodified)",
+    "retrieval": "src.baseline.retrieval.dataset.RetrieverTrainingDataset (unmodified)"
+  },
+  "new_source_files": [
+    "src/data/iu_xray/target_report_policy.py",
+    "src/data/iu_xray/retrieval_adapter.py",
+    "src/data/iu_xray/generation_adapter.py",
+    "src/data/iu_xray/prompt_compatibility.py"
+  ],
+  "new_test_files": [
+    "tests/unit/test_iu_xray_target_report_policy.py",
+    "tests/unit/test_iu_xray_retrieval_adapter.py",
+    "tests/unit/test_iu_xray_generation_adapter.py",
+    "tests/unit/test_iu_xray_prompt_compatibility.py"
+  ],
+  "no_baseline_file_modified": true,
+  "not_integrated_because_unimplemented_stubs": [
+    "src.generation.rag_dataset",
+    "src.generation.base",
+    "src.generation.prompt_templates",
+    "src.common.config"
+  ],
+  "query_key_shape": "(dataset, patient_id, study_id) -- patient_id == study_id for iu-xray",
+  "retrieval_contract": {
+    "corpus_policy": "Corpus = every usable ('valid') record in the split(s) passed to build_corpus(), converted 1:1 (never expanded per-image, never deduplicated beyond what Cell 43 already guarantees). Callers decide which split(s) form the corpus (this module does not hardcode 'train_only' -- see src.baseline.generation.dataset_builder.RAGDatasetBuilderConfig.corpus_scope for the convention this mirrors).",
+    "image_paths_per_flat_record": 1,
+    "multi_image_metadata_preserved_via": "IuXrayRetrievalRecord.source (full IuXrayCanonicalRecord)",
+    "one_record_per_study": true,
+    "query_key_shape": "(dataset, patient_id, study_id) -- patient_id == study_id for iu-xray",
+    "query_policy": "Queries = every usable record in the split passed to build_queries(), one query per study/report (never per image). A query's own key is always excluded from its own candidate set by filter_self_matches() -- test/validation queries never retrieve themselves.",
+    "self_match_exclusion_policy": "By QueryKey equality (dataset, patient_id, study_id) -- since IU X-Ray's patient_id equals study_id (schema_mapping.PATIENT_ID_STRATEGY), self-study and self-patient exclusion collapse to the same check for this dataset. filter_self_matches() implements this directly; src.baseline.generation.dataset_builder.RAGDatasetBuilder additionally, independently enforces the same invariant when building generation rows (defense in depth, not redundant -- the two call sites are different)."
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "policy_table": [
+    {
+      "branch": "findings_and_impression",
+      "condition": "findings is not None and impression is not None",
+      "description": "findings and impression concatenated with a single space (or just one copy if they are identical strings -- never duplicated)",
+      "rank": 1
+    },
+    {
+      "branch": "findings_only",
+      "condition": "findings is not None and impression is None",
+      "description": "findings text alone",
+      "rank": 2
+    },
+    {
+      "branch": "impression_only",
+      "condition": "findings is None and impression is not None",
+      "description": "impression text alone",
+      "rank": 3
+    },
+    {
+      "branch": "full_report_only",
+      "condition": "findings is None and impression is None and full_report is not None",
+      "description": "full_report text (comparison+indication+findings+impression, whichever were present) -- disclosed as practically unreachable for any Cell-43-valid record, since Cell 43's own validity rule already requires findings or impression to be non-None",
+      "rank": 4
+    },
+    {
+      "branch": "unavailable",
+      "condition": "none of the above can produce text",
+      "description": "no target report text could be derived; never fabricated -- callers must handle this explicitly (e.g. exclude the record), never substitute a placeholder string",
+      "rank": 5
+    }
+  ]
+}

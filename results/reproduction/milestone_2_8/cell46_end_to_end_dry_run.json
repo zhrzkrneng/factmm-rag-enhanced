@@ -1,0 +1,138 @@
+{
+  "arm_1_data_only": {
+    "all_target_report_policy_texts_present": true,
+    "arm": "DATA_ONLY",
+    "deterministic_ordering": true,
+    "diagnostic_label": "DATA_ONLY -- loader/schema validation, no retrieval, no generation",
+    "multi_image_grouping_preserved": true,
+    "no_excluded_records": true,
+    "one_sample_per_study": true,
+    "policy_branch_counts": {
+      "findings_and_impression": 27,
+      "impression_only": 5
+    },
+    "record_count": 32,
+    "schema_mapping_full_record_count": 27,
+    "schema_mapping_skip_reasons": [
+      "study_id='CXR1002' cannot be mapped to ReportRecord: findings is None, but ReportRecord.finding/impression are required non-null fields. Not fabricated; see MAPPING_TABLE's 'findings'/'impression' rows.",
+      "study_id='CXR1014' cannot be mapped to ReportRecord: findings is None, but ReportRecord.finding/impression are required non-null fields. Not fabricated; see MAPPING_TABLE's 'findings'/'impression' rows.",
+      "study_id='CXR1016' cannot be mapped to ReportRecord: findings is None, but ReportRecord.finding/impression are required non-null fields. Not fabricated; see MAPPING_TABLE's 'findings'/'impression' rows.",
+      "study_id='CXR1021' cannot be mapped to ReportRecord: findings is None, but ReportRecord.finding/impression are required non-null fields. Not fabricated; see MAPPING_TABLE's 'findings'/'impression' rows.",
+      "study_id='CXR1040' cannot be mapped to ReportRecord: findings is None, but ReportRecord.finding/impression are required non-null fields. Not fabricated; see MAPPING_TABLE's 'findings'/'impression' rows."
+    ],
+    "schema_mapping_skipped_count": 5
+  },
+  "arm_2_mock_retrieval": {
+    "arm": "MOCK_RETRIEVAL",
+    "deterministic_across_repeated_runs": true,
+    "diagnostic_label": "MOCK_RETRIEVAL -- deterministic synthetic evidence, NOT baseline retrieval performance",
+    "evidence_from_different_study": true,
+    "forbidden_retrievers_used": [],
+    "no_real_embedding_model": true,
+    "no_real_faiss_index": true,
+    "no_self_match": true,
+    "query_count": 32,
+    "top_k": 5
+  },
+  "arm_3_oracle_pipeline_check": {
+    "arm": "ORACLE_PIPELINE_CHECK",
+    "diagnostic_label": "ORACLE_PIPELINE_CHECK -- NON-DEPLOYABLE DIAGNOSTIC upper-bound pipeline check, never a model-performance claim",
+    "excluded_from_baseline_result_tables": true,
+    "no_self_reference_in_winning_key": true,
+    "query_count": 10,
+    "target_reference_isolated_from_winning_key": true,
+    "uses_real_chexbert_or_radgraph": false
+  },
+  "arm_4_mock_generation_smoke": {
+    "arm": "MOCK_GENERATION_SMOKE",
+    "deterministic_across_repeated_runs": true,
+    "diagnostic_label": "MOCK_GENERATION_SMOKE -- diagnostic only, no real LLM loaded, no medical-performance claim",
+    "input_row_count": 32,
+    "no_real_model_loaded": true,
+    "one_output_per_non_excluded_input": true,
+    "output_count": 32,
+    "prediction_row_count": 32,
+    "reference_row_count": 32,
+    "stable_output_identifiers": true
+  },
+  "attempted": true,
+  "external_manifest_status": {
+    "available": true,
+    "error": null,
+    "path": "/content/drive/MyDrive/FactMM-RAG-Enhanced/data/iu_xray/canonical/iu_xray_canonical_full.json"
+  },
+  "findings_only_count_full_dataset": 6,
+  "impression_only_count_full_dataset": 489,
+  "missing_optional_metadata_count_full_dataset": 622,
+  "multi_image_count_full_dataset": 3391,
+  "repeated_run_determinism_ok": true,
+  "sample_counts": {
+    "test": 8,
+    "train": 16,
+    "validation": 8
+  },
+  "sample_study_ids": {
+    "findings_only": [
+      "CXR1084",
+      "CXR326",
+      "CXR3260",
+      "CXR3368",
+      "CXR3614"
+    ],
+    "impression_only": [
+      "CXR1002",
+      "CXR1014",
+      "CXR1016",
+      "CXR1021",
+      "CXR1029"
+    ],
+    "missing_optional_metadata": [
+      "CXR100",
+      "CXR1002",
+      "CXR1003",
+      "CXR1006",
+      "CXR101"
+    ],
+    "multi_image": [
+      "CXR1",
+      "CXR10",
+      "CXR100",
+      "CXR1000",
+      "CXR1001"
+    ],
+    "single_image": [
+      "CXR1003",
+      "CXR1012",
+      "CXR1024",
+      "CXR1026",
+      "CXR1029"
+    ],
+    "test": [
+      "CXR100",
+      "CXR1005",
+      "CXR101",
+      "CXR1021",
+      "CXR1024"
+    ],
+    "train": [
+      "CXR1",
+      "CXR1000",
+      "CXR1001",
+      "CXR1002",
+      "CXR1004"
+    ],
+    "validation": [
+      "CXR10",
+      "CXR1003",
+      "CXR1010",
+      "CXR1018",
+      "CXR1027"
+    ]
+  },
+  "single_image_count_full_dataset": 435,
+  "split_counts": {
+    "test": 384,
+    "train": 3060,
+    "validation": 382
+  }
+}

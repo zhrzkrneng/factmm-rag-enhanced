@@ -1,0 +1,23 @@
+{
+  "caveats": [
+    "PromptBuilder itself carries no dataset-specific identifiers or logic -- it only ever sees plain retrieved_report/target_report strings, so there is no MIMIC-CXR/CheXpert metadata for it to fabricate in the first place; this validation confirms that remains true for IU-X-Ray-derived strings too.",
+    "Target report text is never included in retrieved evidence for non-Oracle rows -- checked directly (substring test), not just inferred from self-study exclusion, since two distinct studies could in principle share overlapping text.",
+    "Empty evidence has explicit supported behavior via PromptMode.VQA_INFERENCE/VQA_TRAIN (no retrieved_report argument at all), not a special IU-X-Ray-specific empty-string path -- an excluded RAGDatasetRow (retrieved_report_text=None) is routed to VQA mode, never RAG mode with an empty string.",
+    "Multi-image metadata is not visible to PromptBuilder at all (it only ever sees a single <image> token placeholder, never a real path) -- multi-image grouping is preserved one layer up, in IuXrayRetrievalRecord.source, not lost by this validation.",
+    "Text truncation only occurs through PromptBuilderConfig.max_retrieved_report_length, explicitly configured -- never a hidden default truncation."
+  ],
+  "real_data_summary": {
+    "all_deterministic": true,
+    "any_target_leak": false,
+    "caveats": [
+      "PromptBuilder itself carries no dataset-specific identifiers or logic -- it only ever sees plain retrieved_report/target_report strings, so there is no MIMIC-CXR/CheXpert metadata for it to fabricate in the first place; this validation confirms that remains true for IU-X-Ray-derived strings too.",
+      "Target report text is never included in retrieved evidence for non-Oracle rows -- checked directly (substring test), not just inferred from self-study exclusion, since two distinct studies could in principle share overlapping text.",
+      "Empty evidence has explicit supported behavior via PromptMode.VQA_INFERENCE/VQA_TRAIN (no retrieved_report argument at all), not a special IU-X-Ray-specific empty-string path -- an excluded RAGDatasetRow (retrieved_report_text=None) is routed to VQA mode, never RAG mode with an empty string.",
+      "Multi-image metadata is not visible to PromptBuilder at all (it only ever sees a single <image> token placeholder, never a real path) -- multi-image grouping is preserved one layer up, in IuXrayRetrievalRecord.source, not lost by this validation.",
+      "Text truncation only occurs through PromptBuilderConfig.max_retrieved_report_length, explicitly configured -- never a hidden default truncation."
+    ],
+    "excluded_count": 0,
+    "rag_mode_count": 200,
+    "row_count": 200
+  }
+}

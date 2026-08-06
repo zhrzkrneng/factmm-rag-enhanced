@@ -1,0 +1,23 @@
+{
+  "contract": {
+    "corpus_policy": "Corpus = every usable ('valid') record in the split(s) passed to build_corpus(), converted 1:1 (never expanded per-image, never deduplicated beyond what Cell 43 already guarantees). Callers decide which split(s) form the corpus (this module does not hardcode 'train_only' -- see src.baseline.generation.dataset_builder.RAGDatasetBuilderConfig.corpus_scope for the convention this mirrors).",
+    "image_paths_per_flat_record": 1,
+    "multi_image_metadata_preserved_via": "IuXrayRetrievalRecord.source (full IuXrayCanonicalRecord)",
+    "one_record_per_study": true,
+    "query_key_shape": "(dataset, patient_id, study_id) -- patient_id == study_id for iu-xray",
+    "query_policy": "Queries = every usable record in the split passed to build_queries(), one query per study/report (never per image). A query's own key is always excluded from its own candidate set by filter_self_matches() -- test/validation queries never retrieve themselves.",
+    "self_match_exclusion_policy": "By QueryKey equality (dataset, patient_id, study_id) -- since IU X-Ray's patient_id equals study_id (schema_mapping.PATIENT_ID_STRATEGY), self-study and self-patient exclusion collapse to the same check for this dataset. filter_self_matches() implements this directly; src.baseline.generation.dataset_builder.RAGDatasetBuilder additionally, independently enforces the same invariant when building generation rows (defense in depth, not redundant -- the two call sites are different)."
+  },
+  "real_data": {
+    "attempted": true,
+    "external_manifest_status": {
+      "available": true,
+      "error": null,
+      "path": "/content/drive/MyDrive/FactMM-RAG-Enhanced/data/iu_xray/canonical/iu_xray_canonical_full.json"
+    },
+    "multi_image_still_grouped_sample_ok": true,
+    "no_split_overlap": true,
+    "one_retrieval_query_per_usable_study": true,
+    "usable_total": 3826
+  }
+}
