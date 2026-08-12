@@ -19,10 +19,22 @@ from PIL import Image
 
 from src.baseline.generation.adapter import (
     HFGeneratorAdapter,
+    CheckpointArchitectureMismatchError,
+    ImageTokenMismatchError,
+    VocabRangeMismatchError,
     _apply_vicuna_v1_template,
+    _check_checkpoint_architecture_match,
     _classify_generation_error,
+    _default_image_processor_factory,
     _default_model_factory,
+    _default_tokenizer_factory,
+    _expand_image_placeholder,
+    _HF_NATIVE_LLAVA_CHECKPOINT,
+    _ORIGINAL_LLAVA_CHECKPOINT,
     _pad_to_square,
+    _resolve_embedding_row_count,
+    _resolve_hf_native_checkpoint,
+    _resolve_image_token_expansion,
     _resolve_model_revision,
     _select_default_dtype,
 )
@@ -208,13 +220,18 @@ def test_default_model_factory_never_requests_fp32():
         def from_pretrained(checkpoint, **kwargs):
             captured["checkpoint"] = checkpoint
             captured["kwargs"] = kwargs
-            return _FakeModel()
+            loading_info = {"missing_keys": [], "unexpected_keys": [], "mismatched_keys": [], "error_msgs": []}
+            return _FakeModel(), loading_info
 
     fake_transformers_module = types.SimpleNamespace(LlavaForConditionalGeneration=_FakeLlavaClass)
     with patch.dict("sys.modules", {"transformers": fake_transformers_module}):
         _default_model_factory(GeneratorConfig())
 
-    assert captured["checkpoint"] == GeneratorConfig().llava_checkpoint
+    # Refinement 6: GeneratorConfig()'s default llava_checkpoint
+    # (the original-repo identifier) is substituted for the
+    # transformers-native conversion at actual load time.
+    assert captured["checkpoint"] == _HF_NATIVE_LLAVA_CHECKPOINT
+    assert captured["kwargs"]["output_loading_info"] is True
     assert "torch_dtype" in captured["kwargs"]
     assert captured["kwargs"]["torch_dtype"] != torch.float32
 
@@ -283,6 +300,279 @@ def test_prepare_inputs_rejects_non_finite_pixel_values(image_path):
 
     with pytest.raises(ValueError):
         adapter.prepare_inputs(image_path, "a prompt")
+
+
+# ---------------------------------------------------------------------------
+# _resolve_image_token_expansion / _expand_image_placeholder / real-checkpoint
+# image-token splicing (refinement 5 -- real bug found via a real Colab dry
+# run against liuhaotian/llava-v1.5-7b: "Image features and image tokens do
+# not match: tokens: 0, features N").
+# ---------------------------------------------------------------------------
+
+
+class _RealisticFakeModel:
+    """Unlike _FakeModel (whose .config only ever has _commit_hash), this
+    fake's config exposes image_token_index/vision_config -- the real
+    metadata every actual LlavaForConditionalGeneration checkpoint has,
+    which _resolve_image_token_expansion needs to compute a real
+    num_image_tokens instead of falling back to the pre-refinement
+    single-placeholder-token behavior.
+    """
+
+    def __init__(
+        self,
+        image_token_index=32000,
+        image_size=336,
+        patch_size=14,
+        vision_feature_select_strategy="default",
+        output_ids=None,
+        embedding_rows=32064,
+        num_named_parameters=200,
+        dtype=None,
+        device=None,
+    ):
+        self.config = types.SimpleNamespace(
+            _commit_hash="fakecommit123",
+            image_token_index=image_token_index,
+            vision_feature_select_strategy=vision_feature_select_strategy,
+            vision_config=types.SimpleNamespace(image_size=image_size, patch_size=patch_size),
+        )
+        self._output_ids = output_ids if output_ids is not None else torch.tensor([[0, 1, 2, 3, 4]])
+        self.last_generate_kwargs = None
+        self._embeddings = types.SimpleNamespace(weight=torch.zeros(embedding_rows, 8))
+        self._num_named_parameters = num_named_parameters
+        if dtype is not None:
+            self.dtype = dtype
+        if device is not None:
+            self.device = device
+
+    def generate(self, **kwargs):
+        self.last_generate_kwargs = kwargs
+        return self._output_ids
+
+    def get_input_embeddings(self):
+        return self._embeddings
+
+    def named_parameters(self):
+        return iter((f"param_{i}", None) for i in range(self._num_named_parameters))
+
+
+class _SplicingFakeTokenizer:
+    """Mimics enough real-tokenizer behavior to exercise
+    _expand_image_placeholder: accepts add_special_tokens, and returns
+    plain-list input_ids (not a tensor) when return_tensors isn't
+    requested, exactly like a real HF tokenizer's __call__.
+    """
+
+    BOS_ID = 1
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, text, return_tensors=None, add_special_tokens=True):
+        self.calls.append((text, add_special_tokens))
+        word_ids = [100 + i for i in range(len(text.split()))]
+        ids = ([self.BOS_ID] if add_special_tokens else []) + word_ids
+        if return_tensors == "pt":
+            input_ids = torch.tensor([ids], dtype=torch.long)
+            return {"input_ids": input_ids, "attention_mask": torch.ones_like(input_ids)}
+        return {"input_ids": ids}
+
+    def decode(self, token_ids, skip_special_tokens=True):
+        return "a fake generated report"
+
+
+def test_resolve_image_token_expansion_none_when_model_config_lacks_metadata():
+    # _FakeModel's config only ever has _commit_hash -- the fallback path
+    # every existing prepare_inputs()/generate() test above implicitly
+    # relies on.
+    assert _resolve_image_token_expansion(_FakeModel()) is None
+
+
+def test_resolve_image_token_expansion_default_strategy_drops_cls_token():
+    model = _RealisticFakeModel(image_token_index=32000, image_size=336, patch_size=14)
+    assert _resolve_image_token_expansion(model) == (32000, 576)  # (336 // 14) ** 2
+
+
+def test_resolve_image_token_expansion_full_strategy_keeps_cls_token():
+    model = _RealisticFakeModel(image_size=336, patch_size=14, vision_feature_select_strategy="full")
+    _, num_image_tokens = _resolve_image_token_expansion(model)
+    assert num_image_tokens == 577  # 576 patches + 1 CLS token
+
+
+def test_resolve_image_token_expansion_none_when_vision_config_missing_patch_size():
+    model = _RealisticFakeModel()
+    model.config.vision_config.patch_size = None
+    assert _resolve_image_token_expansion(model) is None
+
+
+def test_expand_image_placeholder_produces_exact_requested_count():
+    tokenizer = _SplicingFakeTokenizer()
+    templated_text = "SYSTEM USER: <image>\nprompt text ASSISTANT:"
+
+    input_ids, attention_mask = _expand_image_placeholder(tokenizer, templated_text, 32000, 576)
+
+    assert int((input_ids == 32000).sum()) == 576
+    assert attention_mask.shape == input_ids.shape
+
+
+def test_expand_image_placeholder_preserves_surrounding_token_order():
+    tokenizer = _SplicingFakeTokenizer()
+    templated_text = "SYS USER: <image>\ntext ASSISTANT:"
+
+    input_ids, _ = _expand_image_placeholder(tokenizer, templated_text, 32000, 3)
+    ids = input_ids[0].tolist()
+
+    image_positions = [i for i, tok in enumerate(ids) if tok == 32000]
+    assert image_positions == list(range(image_positions[0], image_positions[0] + 3))
+    # Exactly two tokenizer calls (pre-image text, post-image text), and
+    # the run of image tokens sits strictly between whatever they produced.
+    assert len(tokenizer.calls) == 2
+    assert tokenizer.calls[0] == ("SYS USER: ", True)
+    assert tokenizer.calls[1] == ("\ntext ASSISTANT:", False)
+
+
+def test_expand_image_placeholder_rejects_missing_placeholder():
+    with pytest.raises(ImageTokenMismatchError):
+        _expand_image_placeholder(_SplicingFakeTokenizer(), "no placeholder here", 32000, 576)
+
+
+def test_expand_image_placeholder_rejects_duplicate_placeholder():
+    with pytest.raises(ImageTokenMismatchError):
+        _expand_image_placeholder(_SplicingFakeTokenizer(), "<image> and <image> again", 32000, 576)
+
+
+def test_prepare_inputs_splices_real_image_tokens_when_model_exposes_metadata(image_path):
+    model = _RealisticFakeModel(image_token_index=32000, image_size=336, patch_size=14)
+    adapter = _adapter(model=model, tokenizer=_SplicingFakeTokenizer())
+
+    prepared = adapter.prepare_inputs(image_path, "a prompt")
+
+    assert int((prepared.input_ids == 32000).sum()) == 576
+
+
+def test_prepare_inputs_uses_naive_tokenization_when_model_lacks_metadata(image_path):
+    # _FakeModel (used by _adapter() with no override) has no
+    # image_token_index/vision_config -- prepare_inputs() must fall back
+    # to the original single-call tokenizer output unchanged, exactly as
+    # every pre-refinement test above already exercises.
+    adapter = _adapter()
+    prepared = adapter.prepare_inputs(image_path, "a prompt")
+    assert prepared.input_ids.dim() == 2
+
+
+# ---------------------------------------------------------------------------
+# _resolve_hf_native_checkpoint / _check_checkpoint_architecture_match /
+# _resolve_embedding_row_count / generate()'s vocab-range guard / diagnose()
+# (refinement 6 -- real bug found via a real Colab dry run against
+# liuhaotian/llava-v1.5-7b: nearly all core weights "newly initialized",
+# then generate() raised a raw "IndexError: index out of range in self").
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_hf_native_checkpoint_substitutes_original_default(capsys):
+    config = GeneratorConfig()
+    assert config.llava_checkpoint == _ORIGINAL_LLAVA_CHECKPOINT
+
+    resolved = _resolve_hf_native_checkpoint(config)
+
+    assert resolved == _HF_NATIVE_LLAVA_CHECKPOINT
+    assert "disclosed compatibility substitution" in capsys.readouterr().out
+
+
+def test_resolve_hf_native_checkpoint_respects_explicit_override(capsys):
+    config = GeneratorConfig(llava_checkpoint="some-org/some-other-llava-checkpoint")
+
+    resolved = _resolve_hf_native_checkpoint(config)
+
+    assert resolved == "some-org/some-other-llava-checkpoint"
+    assert capsys.readouterr().out == ""
+
+
+def test_check_checkpoint_architecture_match_passes_when_no_missing_keys():
+    model = _RealisticFakeModel()
+    _check_checkpoint_architecture_match(model, {"missing_keys": []})  # must not raise
+
+
+def test_check_checkpoint_architecture_match_passes_for_small_noncore_gap():
+    model = _RealisticFakeModel(num_named_parameters=200)
+    # 1/200 missing, and not a core-weight key -- well under the 5%
+    # threshold and not itself core -- must not raise.
+    _check_checkpoint_architecture_match(model, {"missing_keys": ["some.other.head.weight"]})
+
+
+def test_check_checkpoint_architecture_match_raises_for_substantial_core_gap():
+    # Reproduces the real observed failure: most language_model/
+    # vision_tower/multi_modal_projector weights missing from the
+    # checkpoint.
+    model = _RealisticFakeModel(num_named_parameters=200)
+    missing_keys = [f"model.language_model.layers.{i}.self_attn.q_proj.weight" for i in range(150)]
+    missing_keys += ["model.vision_tower.vision_model.embeddings.class_embedding"]
+    missing_keys += ["model.multi_modal_projector.linear_1.weight"]
+
+    with pytest.raises(CheckpointArchitectureMismatchError):
+        _check_checkpoint_architecture_match(model, {"missing_keys": missing_keys})
+
+
+def test_resolve_embedding_row_count_none_for_model_without_get_input_embeddings():
+    assert _resolve_embedding_row_count(_FakeModel()) is None
+
+
+def test_resolve_embedding_row_count_reads_real_embedding_table():
+    model = _RealisticFakeModel(embedding_rows=32064)
+    assert _resolve_embedding_row_count(model) == 32064
+
+
+def _det_config():
+    return GenerationConfig(deterministic=True, temperature=0.0, num_beams=1, max_new_tokens=8, seed=0)
+
+
+def test_generate_stops_before_calling_model_when_input_ids_exceed_vocab(image_path):
+    # image_token_index == embedding_rows reproduces the exact real bug:
+    # a valid-looking id that is exactly one past the embedding table's
+    # last valid row.
+    model = _RealisticFakeModel(image_token_index=32000, embedding_rows=32000)
+    adapter = _adapter(model=model, tokenizer=_SplicingFakeTokenizer())
+
+    result = adapter.generate(Q1, image_path, "a prompt", _det_config())
+
+    assert result.error is not None
+    assert result.error.startswith("vocab_range_mismatch:")
+    assert model.last_generate_kwargs is None  # the real model.generate() was never reached
+
+
+def test_generate_succeeds_past_vocab_guard_when_input_ids_within_range(image_path):
+    model = _RealisticFakeModel(image_token_index=32000, embedding_rows=32064)
+    adapter = _adapter(model=model, tokenizer=_SplicingFakeTokenizer())
+
+    result = adapter.generate(Q1, image_path, "a prompt", _det_config())
+
+    assert result.error is None
+    assert model.last_generate_kwargs is not None
+
+
+def test_diagnose_reports_expected_fields_without_calling_generate(image_path):
+    model = _RealisticFakeModel(image_token_index=32000, embedding_rows=32064)
+    adapter = _adapter(model=model, tokenizer=_SplicingFakeTokenizer())
+
+    diagnostics = adapter.diagnose(image_path, "a prompt")
+
+    assert diagnostics.model_embedding_rows == 32064
+    assert diagnostics.image_token_id == 32000
+    assert diagnostics.image_token_count == 576
+    assert diagnostics.within_vocab_range is True
+    assert len(diagnostics.pixel_values_shape) == 3  # rank-3 (C, H, W) after unbatching
+    assert model.last_generate_kwargs is None  # diagnose() never calls generate()
+
+
+def test_diagnose_reports_within_vocab_range_false_when_exceeded(image_path):
+    model = _RealisticFakeModel(image_token_index=32000, embedding_rows=32000)
+    adapter = _adapter(model=model, tokenizer=_SplicingFakeTokenizer())
+
+    diagnostics = adapter.diagnose(image_path, "a prompt")
+
+    assert diagnostics.within_vocab_range is False
+    assert diagnostics.input_ids_max >= diagnostics.model_embedding_rows
 
 
 # ---------------------------------------------------------------------------

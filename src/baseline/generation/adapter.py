@@ -45,6 +45,57 @@ necessary refinements:
    failures need: out_of_memory, invalid_input, and generation_failure
    (replacing 2.4G's generic "unknown_error" fallback name, which is not
    one of this cell's specified categories).
+
+5. FIXED (real bug, found via a real Colab dry run against the actual
+   liuhaotian/llava-v1.5-7b checkpoint): `prepare_inputs()` tokenized
+   the literal "<image>" substring with a plain base-LM tokenizer that
+   has no such special token, so it always decomposed into ordinary
+   sub-word tokens -- never the model's real `image_token_index` -- and
+   `generate()` failed every time with "Image features and image
+   tokens do not match: tokens: 0, features N". `prepare_inputs()` now
+   resolves the model's real `image_token_index` and the exact number
+   of image feature positions its vision tower produces (from
+   `config.vision_config.image_size`/`patch_size`), and splices that
+   many copies of the real token id in place of the placeholder
+   (`_resolve_image_token_expansion`/`_expand_image_placeholder`). Only
+   takes effect when the loaded model's config actually exposes that
+   metadata -- every real Llava checkpoint does; the pre-refinement,
+   single-placeholder-token behavior is unchanged for anything that
+   doesn't (e.g. this module's own injected test doubles).
+
+6. FIXED (real bug, found via a real Colab dry run: nearly all
+   language-model/vision-tower/multimodal-projector weights reported
+   "newly initialized", then `generate()` failed with a raw
+   `IndexError: index out of range in self`): `liuhaotian/llava-v1.5-7b`
+   is the ORIGINAL LLaVA repository's checkpoint, packaged for that
+   repo's own model code -- its parameter names and config.json shape
+   do not match transformers' native `LlavaForConditionalGeneration`,
+   so loading it there leaves almost every core weight randomly
+   initialized, and the (also essentially-default) `image_token_index`
+   ends up landing exactly one past a randomly-shaped embedding table's
+   bounds. `_default_model_factory`/`_default_tokenizer_factory`/
+   `_default_image_processor_factory` now resolve
+   `llava-hf/llava-1.5-7b-hf` (the transformers-native conversion) for
+   ACTUAL weight/tokenizer/image-processor loading whenever
+   `config.llava_checkpoint` is left at that original-repo default --
+   disclosed explicitly (printed), never silent, and never overriding
+   an explicitly-chosen non-default checkpoint. `config.llava_checkpoint`
+   itself is untouched everywhere else in this project (provenance
+   records, Milestone 2.8 resource discovery, etc. still name the
+   official paper/repo checkpoint). Two new hard gates were added: (a)
+   `_check_checkpoint_architecture_match` inspects
+   `from_pretrained(..., output_loading_info=True)`'s `missing_keys` and
+   raises `CheckpointArchitectureMismatchError` at construction time,
+   before any generation is attempted, if a substantial fraction of
+   core weights were not actually loaded from the checkpoint; (b)
+   `generate()` now validates every input token id is within the
+   model's real embedding-table bounds and raises
+   `VocabRangeMismatchError` before ever calling the real
+   `model.generate()` if not. A new `diagnose()` method reports the
+   exact pre-generation values (tokenizer length, model embedding rows,
+   input_ids min/max, image token id/count, pixel_values shape, model
+   dtype/device) without performing generation, for explicit,
+   before-the-fact auditing.
 """
 
 from __future__ import annotations
@@ -153,6 +204,58 @@ class GeneratorResult:
             )
 
 
+class CheckpointArchitectureMismatchError(RuntimeError):
+    """Raised at HFGeneratorAdapter construction time (see refinement 6)
+    when a loaded checkpoint's weights don't actually match the
+    LlavaForConditionalGeneration architecture it was loaded into -- a
+    substantial fraction of core weights (language model, vision
+    tower, or multimodal projector) were reported "newly initialized"
+    (i.e. missing from the checkpoint) rather than actually loaded.
+    Never subclasses ValueError -- must be classified as its own
+    "checkpoint_architecture_mismatch" category, not folded into the
+    generic "invalid_input" bucket.
+    """
+
+
+class VocabRangeMismatchError(RuntimeError):
+    """Raised by generate() (see refinement 6) when prepared input_ids
+    contain a token id outside the model's real embedding-table bounds
+    -- e.g. a tokenizer pulled from a different checkpoint family than
+    the model. Raised BEFORE the real model.generate() is ever called.
+    Classified as its own "vocab_range_mismatch" category.
+    """
+
+
+class ImageTokenMismatchError(RuntimeError):
+    """Raised by _expand_image_placeholder (see refinement 5) when the
+    templated prompt text doesn't contain exactly one "<image>"
+    placeholder, or the spliced input_ids don't end up with the exact
+    expected image-token count. Classified as its own
+    "image_token_mismatch" category, distinct from a general
+    invalid_input caller mistake.
+    """
+
+
+@dataclass(frozen=True)
+class PreGenerationDiagnostics:
+    """Exact, explicit pre-generation values (refinement 6, requirement
+    10): computed by HFGeneratorAdapter.diagnose() without ever calling
+    the real model.generate() -- for auditing what generate() is about
+    to do, before it does it.
+    """
+
+    tokenizer_length: Optional[int]
+    model_embedding_rows: Optional[int]
+    input_ids_min: int
+    input_ids_max: int
+    image_token_id: Optional[int]
+    image_token_count: int
+    pixel_values_shape: Tuple[int, ...]
+    model_dtype: Optional[str]
+    model_device: Optional[str]
+    within_vocab_range: bool
+
+
 class GeneratorAdapter(abc.ABC):
     """Abstract seam between LLaVAGenerator and a concrete generation backend.
 
@@ -232,6 +335,172 @@ def _apply_vicuna_v1_template(prompt_text: str, *, image_token: str = _IMAGE_TOK
     return f"{_VICUNA_V1_SYSTEM_PROMPT} USER: {user_turn} ASSISTANT:"
 
 
+def _resolve_image_token_expansion(model) -> Optional[Tuple[int, int]]:
+    """Resolves (image_token_id, num_image_tokens) from a loaded model's
+    config, or None if that metadata isn't present (see refinement 5).
+
+    Every real LlavaForConditionalGeneration checkpoint's config exposes
+    both `image_token_index` (the vocabulary id the model scatters vision
+    features into) and `vision_config.image_size`/`patch_size` (which
+    together determine exactly how many image feature positions the
+    vision tower produces per image, e.g. (336 // 14) ** 2 == 576 for
+    CLIP-ViT-L-336). Returning None here (e.g. an injected test double
+    whose fake config has neither field) signals prepare_inputs() to
+    keep the pre-refinement single-placeholder-token behavior -- this
+    never happens for a real checkpoint, only for metadata that
+    genuinely doesn't describe a Llava vision/language pairing.
+    """
+    config = getattr(model, "config", None)
+    image_token_id = getattr(config, "image_token_index", None) if config is not None else None
+    vision_config = getattr(config, "vision_config", None) if config is not None else None
+    if image_token_id is None or vision_config is None:
+        return None
+
+    image_size = getattr(vision_config, "image_size", None)
+    patch_size = getattr(vision_config, "patch_size", None)
+    if not image_size or not patch_size:
+        return None
+
+    num_patches = (image_size // patch_size) ** 2
+    strategy = getattr(config, "vision_feature_select_strategy", "default")
+    num_image_tokens = num_patches + 1 if strategy == "full" else num_patches
+    return image_token_id, num_image_tokens
+
+
+def _expand_image_placeholder(tokenizer, templated_text: str, image_token_id: int, num_image_tokens: int):
+    """Replaces the single, human-readable "<image>" substring in
+    `templated_text` with `num_image_tokens` copies of the model's real
+    `image_token_id`, tokenizing the text on either side separately.
+
+    This is necessary (see refinement 5) because the plain base-LM
+    tokenizer used here (loaded from `base_lm_name`/`tokenizer_name`,
+    never the Llava checkpoint's own paired processor) has no "<image>"
+    special token at all -- tokenizing the literal substring produces
+    ordinary sub-word tokens that never equal `image_token_id`, so the
+    model's forward pass finds zero image placeholder positions to
+    scatter its real, non-empty vision features into.
+    """
+    import torch
+
+    occurrences = templated_text.count(_IMAGE_TOKEN)
+    if occurrences != 1:
+        raise ImageTokenMismatchError(
+            f"templated_text must contain exactly one {_IMAGE_TOKEN!r} "
+            f"placeholder to expand, found {occurrences}"
+        )
+    pre_text, _, post_text = templated_text.partition(_IMAGE_TOKEN)
+
+    pre_ids = list(tokenizer(pre_text, add_special_tokens=True)["input_ids"])
+    post_ids = list(tokenizer(post_text, add_special_tokens=False)["input_ids"])
+
+    spliced = pre_ids + [image_token_id] * num_image_tokens + post_ids
+    input_ids = torch.tensor([spliced], dtype=torch.long)
+    attention_mask = torch.ones_like(input_ids)
+
+    actual = int((input_ids == image_token_id).sum())
+    if actual != num_image_tokens:
+        raise ImageTokenMismatchError(
+            f"Internal error expanding the image placeholder: expected "
+            f"{num_image_tokens} occurrence(s) of image_token_id="
+            f"{image_token_id} in the spliced input_ids, got {actual}."
+        )
+    return input_ids, attention_mask
+
+
+_ORIGINAL_LLAVA_CHECKPOINT = "liuhaotian/llava-v1.5-7b"
+_HF_NATIVE_LLAVA_CHECKPOINT = "llava-hf/llava-1.5-7b-hf"
+
+_CORE_WEIGHT_PREFIXES: Tuple[str, ...] = ("language_model.", "vision_tower.", "multi_modal_projector.")
+
+
+def _resolve_hf_native_checkpoint(config) -> str:
+    """Resolves the checkpoint identifier to actually load for the
+    model/tokenizer/image processor (see refinement 6).
+
+    Substitutes `llava-hf/llava-1.5-7b-hf` (the transformers-native
+    conversion) for `config.llava_checkpoint` ONLY when it is still the
+    original-repo default (`liuhaotian/llava-v1.5-7b`) -- the original
+    repo's checkpoint is packaged for that repo's own model code, not
+    transformers' LlavaForConditionalGeneration, and loading it there
+    leaves nearly every core weight randomly initialized (see
+    _check_checkpoint_architecture_match). config.llava_checkpoint
+    itself is never mutated -- this substitution is local to how
+    HFGeneratorAdapter's own factories actually load weights; an
+    explicitly-chosen non-default checkpoint is always respected as-is.
+    """
+    if config.llava_checkpoint == _ORIGINAL_LLAVA_CHECKPOINT:
+        print(
+            f"[HFGeneratorAdapter] NOTE: disclosed compatibility substitution -- "
+            f"{_ORIGINAL_LLAVA_CHECKPOINT!r} is the original LLaVA repository's "
+            f"checkpoint, incompatible with transformers' native "
+            f"LlavaForConditionalGeneration (its weight names/config don't "
+            f"match, leaving core weights randomly initialized if loaded "
+            f"there). Using the transformers-native conversion "
+            f"{_HF_NATIVE_LLAVA_CHECKPOINT!r} instead for actual model/"
+            f"tokenizer/image-processor loading. config.llava_checkpoint "
+            f"itself is unchanged everywhere else in this project."
+        )
+        return _HF_NATIVE_LLAVA_CHECKPOINT
+    return config.llava_checkpoint
+
+
+def _check_checkpoint_architecture_match(model, loading_info, *, max_missing_fraction: float = 0.05) -> None:
+    """Raises CheckpointArchitectureMismatchError (refinement 6,
+    requirement 6) if a substantial fraction of core weights (language
+    model, vision tower, or multimodal projector) were reported missing
+    from the checkpoint -- i.e. randomly/newly initialized rather than
+    actually loaded -- per `from_pretrained(..., output_loading_info=True)`'s
+    own `missing_keys` list. This is the exact, structured signal transformers
+    itself provides for "checkpoint doesn't actually match this architecture";
+    never inferred from parsing the human-readable warning text.
+    """
+    missing_keys = list((loading_info or {}).get("missing_keys") or [])
+    if not missing_keys:
+        return
+
+    total_params = sum(1 for _ in model.named_parameters())
+    if total_params == 0:
+        return
+
+    missing_fraction = len(missing_keys) / total_params
+    missing_core = [key for key in missing_keys if any(prefix in key for prefix in _CORE_WEIGHT_PREFIXES)]
+
+    if missing_fraction > max_missing_fraction and missing_core:
+        raise CheckpointArchitectureMismatchError(
+            f"{len(missing_keys)}/{total_params} parameters "
+            f"({missing_fraction:.1%}) were NOT found in the checkpoint and "
+            f"were newly/randomly initialized instead, including "
+            f"{len(missing_core)} core weight(s) (language model / vision "
+            f"tower / multimodal projector), e.g. {missing_core[:3]}. This "
+            f"means the checkpoint's parameter names do not actually match "
+            f"the LlavaForConditionalGeneration architecture it was loaded "
+            f"into -- refusing to attempt generation against substantially "
+            f"random weights."
+        )
+
+
+def _resolve_embedding_row_count(model) -> Optional[int]:
+    """Best-effort real embedding-table row count -- the true bound
+    input_ids must respect, more reliable than a possibly-stale
+    `config.vocab_size` field. Returns None (never raises) if `model`
+    doesn't expose `get_input_embeddings()` (e.g. an injected test
+    double) -- refinement 6's vocab-range guard is then simply skipped,
+    matching the same fallback discipline as refinement 5.
+    """
+    get_input_embeddings = getattr(model, "get_input_embeddings", None)
+    if get_input_embeddings is None:
+        return None
+    try:
+        embeddings = get_input_embeddings()
+        weight = getattr(embeddings, "weight", None)
+        shape = getattr(weight, "shape", None) if weight is not None else None
+        if not shape:
+            return None
+        return int(shape[0])
+    except Exception:  # noqa: BLE001 -- diagnostics must never crash generate() itself
+        return None
+
+
 def _pad_to_square(image):
     """Pads a PIL RGB image to a square canvas (image_aspect_ratio=pad).
 
@@ -269,8 +538,8 @@ def _resolve_model_revision(model) -> Optional[str]:
 
 
 def _classify_generation_error(exc: Exception) -> Tuple[str, str]:
-    """Classifies exc into one of 8 categories -- never a single generic
-    bucket. See module docstring, refinement 4.
+    """Classifies exc into one of 11 categories -- never a single generic
+    bucket. See module docstring, refinements 4 and 6.
     """
     seen = []
     cur = exc
@@ -285,6 +554,22 @@ def _classify_generation_error(exc: Exception) -> Tuple[str, str]:
 
     def has_type(substr: str) -> bool:
         return any(substr in name for name in type_names)
+
+    # Refinement 6's own three exception types are checked first and
+    # explicitly, by isinstance -- ahead of every other check, including
+    # the generic ValueError bucket below, so they are never folded
+    # into invalid_input/generation_failure. Distinguishes checkpoint
+    # incompatibility (A) / vocab mismatch (B) / image-token expansion
+    # mismatch (C) from an ordinary caller mistake or a genuine
+    # generation-time failure (D).
+    if isinstance(exc, CheckpointArchitectureMismatchError):
+        return "checkpoint_architecture_mismatch", f"{type(exc).__name__}: {exc}"
+
+    if isinstance(exc, VocabRangeMismatchError):
+        return "vocab_range_mismatch", f"{type(exc).__name__}: {exc}"
+
+    if isinstance(exc, ImageTokenMismatchError):
+        return "image_token_mismatch", f"{type(exc).__name__}: {exc}"
 
     # Type-specific checks run BEFORE generic message-content sniffing --
     # see Milestone 2.4G's own classifier for why (a network-layer
@@ -377,20 +662,36 @@ def _select_default_dtype():
 def _default_model_factory(config):
     from transformers import LlavaForConditionalGeneration
 
-    return LlavaForConditionalGeneration.from_pretrained(
-        config.llava_checkpoint, torch_dtype=_select_default_dtype()
+    checkpoint = _resolve_hf_native_checkpoint(config)
+    model, loading_info = LlavaForConditionalGeneration.from_pretrained(
+        checkpoint, torch_dtype=_select_default_dtype(), output_loading_info=True
     )
+    _check_checkpoint_architecture_match(model, loading_info)
+    return model
 
 
 def _default_tokenizer_factory(config):
     from transformers import AutoTokenizer
 
+    checkpoint = _resolve_hf_native_checkpoint(config)
+    if checkpoint != config.llava_checkpoint:
+        # Substituted checkpoint -- use ITS bundled tokenizer, not
+        # config.tokenizer_name/base_lm_name (which target the
+        # ORIGINAL checkpoint's family and would reintroduce the exact
+        # vocab/embedding-table mismatch this refinement fixes;
+        # requirement 8: tokenizer/processor/model must all come from
+        # the same compatible checkpoint family).
+        return AutoTokenizer.from_pretrained(checkpoint)
     tokenizer_name = config.tokenizer_name or config.base_lm_name
     return AutoTokenizer.from_pretrained(tokenizer_name)
 
 
 def _default_image_processor_factory(config):
     from transformers import CLIPImageProcessor
+
+    checkpoint = _resolve_hf_native_checkpoint(config)
+    if checkpoint != config.llava_checkpoint:
+        return CLIPImageProcessor.from_pretrained(checkpoint)
 
     return CLIPImageProcessor.from_pretrained(config.vision_tower_name)
 
@@ -478,6 +779,29 @@ class HFGeneratorAdapter(GeneratorAdapter):
         if input_ids.dim() != 2:
             raise ValueError(f"input_ids must be rank-2 (1, L), got shape {tuple(input_ids.shape)}")
 
+        # Refinement 5 (real bug, found via a real Colab dry run against
+        # the actual liuhaotian/llava-v1.5-7b checkpoint): the tokenizer
+        # above has no "<image>" special token, so the naive input_ids
+        # built from it contain zero occurrences of the model's real
+        # image_token_index while the vision tower still produces a full
+        # set of real image features -- LlavaForConditionalGeneration's
+        # forward pass then raises "Image features and image tokens do
+        # not match: tokens: 0, features N". When the loaded model's
+        # config exposes enough metadata to compute the real expected
+        # image token count (every real Llava checkpoint does), replace
+        # the single placeholder with that many copies of the real
+        # image_token_index instead. Falls back to the input_ids already
+        # built above when that metadata isn't present (e.g. an injected
+        # test double) -- never a silent behavior change for a real
+        # checkpoint, only for a model that genuinely isn't describable
+        # this way.
+        expansion = _resolve_image_token_expansion(self._model)
+        if expansion is not None:
+            image_token_id, num_image_tokens = expansion
+            input_ids, attention_mask = _expand_image_placeholder(
+                self._tokenizer, templated_text, image_token_id, num_image_tokens
+            )
+
         return PreparedGeneratorInputs(
             pixel_values=pixel_values, input_ids=input_ids, attention_mask=attention_mask
         )
@@ -514,6 +838,51 @@ class HFGeneratorAdapter(GeneratorAdapter):
             generation_timestamp_utc=_utc_now_iso(),
         )
 
+    def diagnose(self, image_path: str, prompt_text: str) -> PreGenerationDiagnostics:
+        """Computes the exact pre-generation diagnostic values
+        (refinement 6, requirement 10) -- tokenizer length, model
+        embedding-table row count, input_ids min/max, image token
+        id/count, pixel_values shape, model dtype/device -- WITHOUT
+        ever calling the real model.generate(). Intended for explicit,
+        before-the-fact auditing by a caller (e.g. a dry-run script)
+        immediately before it calls generate() itself; generate()
+        performs the same vocab-range check on its own and raises
+        VocabRangeMismatchError if it fails, so calling diagnose()
+        first is optional, never required for correctness.
+        """
+        prepared = self.prepare_inputs(image_path, prompt_text)
+
+        expansion = _resolve_image_token_expansion(self._model)
+        image_token_id = expansion[0] if expansion is not None else None
+        image_token_count = (
+            int((prepared.input_ids == image_token_id).sum()) if image_token_id is not None else 0
+        )
+
+        tokenizer_length = None
+        if hasattr(self._tokenizer, "__len__"):
+            try:
+                tokenizer_length = len(self._tokenizer)
+            except Exception:  # noqa: BLE001 -- diagnostics must never crash
+                tokenizer_length = None
+
+        embedding_rows = _resolve_embedding_row_count(self._model)
+        input_ids_min = int(prepared.input_ids.min())
+        input_ids_max = int(prepared.input_ids.max())
+        within_vocab_range = embedding_rows is None or (0 <= input_ids_min and input_ids_max < embedding_rows)
+
+        return PreGenerationDiagnostics(
+            tokenizer_length=tokenizer_length,
+            model_embedding_rows=embedding_rows,
+            input_ids_min=input_ids_min,
+            input_ids_max=input_ids_max,
+            image_token_id=image_token_id,
+            image_token_count=image_token_count,
+            pixel_values_shape=tuple(prepared.pixel_values.shape),
+            model_dtype=str(getattr(self._model, "dtype", None)),
+            model_device=str(getattr(self._model, "device", None)),
+            within_vocab_range=within_vocab_range,
+        )
+
     def generate(
         self,
         query_key: QueryKey,
@@ -536,6 +905,26 @@ class HFGeneratorAdapter(GeneratorAdapter):
             torch.manual_seed(seed)
 
             prepared = self.prepare_inputs(image_path, prompt)
+
+            # Refinement 6, requirement 11: STOP before calling the real
+            # model.generate() if any input token id falls outside the
+            # model's actual embedding-table bounds -- the exact
+            # failure mode that previously surfaced as a raw, opaque
+            # "IndexError: index out of range in self" deep inside the
+            # real forward pass instead of a clear, classified error.
+            embedding_rows = _resolve_embedding_row_count(self._model)
+            if embedding_rows is not None:
+                min_id = int(prepared.input_ids.min())
+                max_id = int(prepared.input_ids.max())
+                if max_id >= embedding_rows or min_id < 0:
+                    raise VocabRangeMismatchError(
+                        f"input_ids contain token id(s) outside the model's "
+                        f"embedding table range [0, {embedding_rows}): "
+                        f"min={min_id}, max={max_id}. This means the "
+                        f"tokenizer/processor used to build input_ids is not "
+                        f"from the same checkpoint family as the loaded "
+                        f"model."
+                    )
 
             gen_kwargs = dict(
                 input_ids=prepared.input_ids,
