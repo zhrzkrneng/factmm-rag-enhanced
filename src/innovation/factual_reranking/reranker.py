@@ -39,7 +39,7 @@ exists"):
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Protocol
+from typing import Any, List, Optional, Protocol, Sequence, Tuple
 
 from src.baseline.pair_mining.mining import QueryKey
 
@@ -163,3 +163,176 @@ def compute_final_score(
         + config.beta * compatibility_score
         + config.gamma * evidence_component
     )
+
+
+# ---------------------------------------------------------------------------
+# Cell 48 (this revision): the real I2 algorithm -- MeSH-term consensus
+# reranking, on top of the contract above. Reuses compute_final_score
+# and RerankResult unchanged; adds no new fields to either. Generic
+# over candidate identity (RerankCandidateInput.candidate_key), never
+# depends on any specific dataset's record type directly -- the real
+# IU X-Ray bridge lives in pipeline_adapter.py, mirroring
+# adaptive_retrieval's own algorithm/pipeline-adapter separation.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class RerankCandidateInput:
+    """One candidate's input to rerank_candidates -- generic, decoupled
+    from any specific dataset's record type (see pipeline_adapter.py for
+    the IU X-Ray-specific bridge).
+
+    Attributes:
+        candidate_key: opaque candidate identifier (e.g. QueryKey).
+        retrieval_score: this candidate's original (pre-rerank)
+            retrieval score.
+        mesh_terms: this candidate's OWN MeSH terms (real, structured,
+            extracted from that candidate's own report at Cell 43
+            canonicalization time) -- never the query's or target's.
+        findings: this candidate's own Findings text, or None.
+        impression: this candidate's own Impression text, or None.
+    """
+
+    candidate_key: Any
+    retrieval_score: float
+    mesh_terms: Sequence[str]
+    findings: Optional[str]
+    impression: Optional[str]
+
+
+def compute_mesh_term_consensus_score(
+    candidate_mesh_terms: Sequence[str],
+    other_candidates_mesh_terms: Sequence[Sequence[str]],
+) -> Tuple[float, str]:
+    """The primary I2 compatibility signal: Jaccard similarity between
+    one candidate's MeSH terms and the union of MeSH terms across the
+    OTHER candidates in the same selected set -- never the query's
+    target report (no target leakage: this function does not accept
+    and has never seen target-report content).
+
+    Deterministic, pure set arithmetic, bounded [0, 1]. Edge cases
+    (matching the required specification exactly):
+        - `other_candidates_mesh_terms` empty (this is the only
+          candidate in the set, e.g. K=1 from I1) -> 0.5, basis
+          "k1_no_others": there is no consensus to compare against at
+          all, distinct from a real disagreement.
+        - candidate's own terms empty AND the union of others' terms
+          also empty -> 0.5, basis "both_empty": no information either
+          way, not evidence of disagreement.
+        - exactly one side empty (candidate empty / consensus
+          non-empty, or the reverse) -> 0.0, basis "one_side_empty":
+          falls out of the Jaccard formula itself (intersection is
+          always empty when one side is empty), not a special case.
+        - both non-empty -> real Jaccard similarity, basis "jaccard".
+
+    Returns:
+        (score, basis) -- score in [0, 1]; basis is a short,
+        machine-readable label naming which branch produced it (used
+        by diagnostics to count neutral/edge cases without re-deriving
+        them from raw mesh_terms).
+    """
+    if not other_candidates_mesh_terms:
+        return 0.5, "k1_no_others"
+
+    candidate_set = set(candidate_mesh_terms)
+    others_union = set()
+    for terms in other_candidates_mesh_terms:
+        others_union.update(terms)
+
+    if not candidate_set and not others_union:
+        return 0.5, "both_empty"
+
+    union = candidate_set | others_union
+    intersection = candidate_set & others_union
+    basis = "jaccard" if candidate_set and others_union else "one_side_empty"
+    return len(intersection) / len(union), basis
+
+
+def compute_evidence_quality_score(findings: Optional[str], impression: Optional[str]) -> float:
+    """Purely structural evidence-quality score, computed only from a
+    candidate's OWN report text -- no external model call, no target
+    access:
+
+        both findings and impression present (non-empty after
+            stripping whitespace) -> 1.0
+        exactly one present                                -> 0.5
+        neither present                                    -> 0.0
+    """
+    has_findings = bool(findings and findings.strip())
+    has_impression = bool(impression and impression.strip())
+    if has_findings and has_impression:
+        return 1.0
+    if has_findings or has_impression:
+        return 0.5
+    return 0.0
+
+
+def rerank_candidates(
+    candidates: Sequence[RerankCandidateInput],
+    config: RerankConfig,
+) -> List[RerankResult]:
+    """Reranks `candidates` using the shared Cell 47 scoring contract
+    (compute_final_score) with the real MeSH-term consensus
+    compatibility signal and the structural evidence-quality signal
+    above.
+
+    Preserves the candidate SET exactly -- returns exactly one
+    RerankResult per input candidate, never adding or dropping any
+    (Section requirement: "I2 may reorder/reweight candidates but must
+    not introduce new candidates"). Deterministic: candidates are
+    sorted by (-final_score, rank_before) -- ties in final_score are
+    broken by original rank ascending, never randomly, so a caller
+    re-running this with identical inputs always gets an identical
+    order.
+
+    With `config.beta == 0.0` and `config.gamma == 0.0` (RerankConfig's
+    own defaults), final_score reduces to `config.alpha *
+    retrieval_score` for every candidate -- sorting by that reproduces
+    the original retrieval-score order exactly, so `rank_after ==
+    rank_before` for every candidate whenever the input was already
+    retrieval-score-ordered. This is why I2 disabled (beta=gamma=0) is
+    baseline-equivalent by construction, not by a separate code path.
+    """
+    n = len(candidates)
+    all_mesh_terms = [list(c.mesh_terms) for c in candidates]
+
+    scored: List[RerankResult] = []
+    for idx, candidate in enumerate(candidates):
+        others_mesh_terms = [all_mesh_terms[j] for j in range(n) if j != idx]
+        compatibility_score, basis = compute_mesh_term_consensus_score(
+            candidate.mesh_terms, others_mesh_terms
+        )
+        evidence_quality_score = compute_evidence_quality_score(candidate.findings, candidate.impression)
+        final_score = compute_final_score(
+            config,
+            retrieval_score=candidate.retrieval_score,
+            compatibility_score=compatibility_score,
+            evidence_quality_score=evidence_quality_score,
+        )
+        scored.append(
+            RerankResult(
+                candidate_key=candidate.candidate_key,
+                retrieval_score=candidate.retrieval_score,
+                compatibility_score=compatibility_score,
+                evidence_quality_score=evidence_quality_score,
+                final_score=final_score,
+                rank_before=idx,
+                rank_after=None,
+                provenance=f"mesh_term_consensus_jaccard:{basis}",
+            )
+        )
+
+    ordered = sorted(scored, key=lambda r: (-r.final_score, r.rank_before))
+    return [
+        RerankResult(
+            candidate_key=r.candidate_key,
+            retrieval_score=r.retrieval_score,
+            compatibility_score=r.compatibility_score,
+            evidence_quality_score=r.evidence_quality_score,
+            final_score=r.final_score,
+            rank_before=r.rank_before,
+            rank_after=new_rank,
+            provenance=r.provenance,
+        )
+        for new_rank, r in enumerate(ordered)
+    ]
