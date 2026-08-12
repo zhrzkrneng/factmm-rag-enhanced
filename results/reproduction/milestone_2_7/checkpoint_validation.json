@@ -1,30 +1,28 @@
 {
   "clip_vision": {
-    "blocker_classification": "CHECKPOINT_UNAVAILABLE",
-    "exists_locally": false,
+    "blocker_classification": "NOT_APPLICABLE",
+    "exists_locally": true,
     "expected_location": "~/.cache/huggingface/hub/ (models--openai--clip-vit-base-patch32)",
     "identifier": "openai/clip-vit-base-patch32",
-    "load_error": "OSError: We couldn't connect to 'https://huggingface.co' to load the files, and couldn't find them in the cached files.\nCheck your internet connection or see how to run the library in offline mode at 'https://huggingface.co/docs/transformers/installation#offline-mode'.",
-    "loadable_metadata_only": false,
+    "load_error": null,
+    "loadable_metadata_only": true,
     "missing_dependencies": [],
     "resolved_revision_recorded": "3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268",
     "source": "OFFICIAL_REPOSITORY",
-    "status": "MISSING"
+    "status": "AVAILABLE"
   },
   "f1chexbert": {
-    "blocker_classification": "missing_dependency",
+    "blocker_classification": "NOT_APPLICABLE",
     "exists_locally": null,
     "expected_location": "package-internal cache (not a fixed project path)",
     "identifier": "f1chexbert",
     "load_error": null,
     "loadable_metadata_only": "NOT_APPLICABLE",
-    "missing_dependencies": [
-      "f1chexbert"
-    ],
+    "missing_dependencies": [],
     "note": "Package import status is checked (PART 1); this cell does not construct the real annotator/labeler object (that would trigger the package's own checkpoint resolution, out of scope for a no-download, no-inference validation cell).",
     "resolved_revision_recorded": "0.0.2",
     "source": "OFFICIAL_REPOSITORY",
-    "status": "MISSING"
+    "status": "AVAILABLE"
   },
   "llava_1_6": {
     "identifier": "LLaVA-1.6 backbone-variation ablation",
@@ -58,30 +56,28 @@
     "status": "MISSING"
   },
   "radgraph": {
-    "blocker_classification": "missing_dependency",
+    "blocker_classification": "NOT_APPLICABLE",
     "exists_locally": null,
     "expected_location": "package-internal cache (not a fixed project path)",
     "identifier": "radgraph",
     "load_error": null,
     "loadable_metadata_only": "NOT_APPLICABLE",
-    "missing_dependencies": [
-      "radgraph"
-    ],
+    "missing_dependencies": [],
     "note": "Package import status is checked (PART 1); this cell does not construct the real annotator/labeler object (that would trigger the package's own checkpoint resolution, out of scope for a no-download, no-inference validation cell).",
     "resolved_revision_recorded": "0.0.9",
     "source": "OFFICIAL_REPOSITORY",
-    "status": "MISSING"
+    "status": "AVAILABLE"
   },
   "t5_ance": {
-    "blocker_classification": "CHECKPOINT_UNAVAILABLE",
-    "exists_locally": false,
+    "blocker_classification": "NOT_APPLICABLE",
+    "exists_locally": true,
     "expected_location": "~/.cache/huggingface/hub/ (models--OpenMatch--t5-ance)",
     "identifier": "OpenMatch/t5-ance",
-    "load_error": "OSError: We couldn't connect to 'https://huggingface.co' to load the files, and couldn't find them in the cached files.\nCheck your internet connection or see how to run the library in offline mode at 'https://huggingface.co/docs/transformers/installation#offline-mode'.",
-    "loadable_metadata_only": false,
+    "load_error": null,
+    "loadable_metadata_only": true,
     "missing_dependencies": [],
     "resolved_revision_recorded": "bf70ee32b49c3e8c1d40982feebbc3b9930eeab4",
     "source": "OFFICIAL_REPOSITORY",
-    "status": "MISSING"
+    "status": "AVAILABLE"
   }
 }
